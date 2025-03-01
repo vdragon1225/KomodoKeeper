@@ -195,8 +195,6 @@ fly_sprite = FlySprite(fly_frames, screen_width // 2, screen_height // 3)
 all_sprites = pygame.sprite.Group(teenage_sprite, baby_komodo_sprite, old_komodo_sprite)
 all_sprites.add(fly_sprite)
 
-
-
 # Need to import sprites for the food, water, play, and sleep features
 
 # Create a surface for the food
@@ -332,10 +330,10 @@ while running:
         screen.blit(surface, (x_position, y_position))
 
 
-
+    # FIXME
     # Update the age of the pet every 3 minute (3000 milliseconds)
     now = pygame.time.get_ticks()
-    if now - last_age_update >= 3000: # Change back to 60000
+    if now - last_age_update >= 1000: # Change back to 60000
         pet_age += 1
         last_age_update = now
         print(f"Pet age: {pet_age} years")
@@ -344,11 +342,16 @@ while running:
     age_text = test_font.render(f"Pet age: {pet_age} years", True, (255, 255, 255))
     screen.blit(age_text, (10, 10))  # Position the text at the top-left corner
 
+    # FIXME
     # Update the hunger level of the pet every 4 seconds (4000 milliseconds)
-    if now - last_hunger_update >= 4000:
+    if now - last_hunger_update >= 2000:
         pet_hunger -= 10
         last_hunger_update = now
         print(f"Pet hunger: {pet_hunger}%")
+
+        # Check if pet has starved
+        if pet_hunger <= 0:
+            game_state = GAME_OVER
 
     # Render the hunger text
     hunger_text = test_font.render(f"Pet hunger: {pet_hunger}%", True, (255, 255, 255))
@@ -373,6 +376,10 @@ while running:
         print("Pet is now an adult!")
         all_sprites.add(old_komodo_sprite)
         
+    elif pet_age >= 30:
+        game_state = GAME_OVER
+
+    # Update and draw all sprites
         all_sprites.update()
         all_sprites.draw(screen)
     
@@ -414,6 +421,15 @@ while running:
             # Update and draw all sprites
             all_sprites.update()
             all_sprites.draw(screen)
+
+        elif game_state == GAME_OVER:
+            # Display Game Over screen
+            game_over_text = large_font.render("Game Over", True, (255, 0, 0))
+            screen.blit(game_over_text, (screen_width // 2 - game_over_text.get_width() // 2, screen_height // 4))
+    
+            # Draw retry and exit buttons
+            retry_button.draw(screen)
+            exit_button.draw(screen)
     
     # Place the buttons at the bottom of the screen
     left_button_x = screen_width // 4 - left_button_surface.get_width() // 2
