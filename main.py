@@ -12,6 +12,10 @@ pygame.display.set_caption("Reptile Pet Simulator")
 clock = pygame.time.Clock()
 test_font = pygame.font.Font(None, 24)
 
+# Load and scale the background image
+background_image = pygame.image.load('graphics/background.png').convert()
+background_image = pygame.transform.scale(background_image, (screen_width, screen_height))
+
 # Initialize the age of the pet
 pet_age = 0
 last_age_update = pygame.time.get_ticks()
@@ -55,8 +59,8 @@ class AnimatedSprite(pygame.sprite.Sprite):
             self.image = self.frames[self.current_frame]
 
 # Create an instance of the animated sprite
-teenage_sprite = AnimatedSprite(pet_frames, screen_width // 2, screen_height // 2)
-baby_komodo_sprite = AnimatedSprite(baby_komodo_frames, screen_width // 2, screen_height // 2)
+teenage_sprite = AnimatedSprite(pet_frames, screen_width // 2, screen_height // 2 + 100)
+baby_komodo_sprite = AnimatedSprite(baby_komodo_frames, screen_width // 2, screen_height // 2 + 100)
 all_sprites = pygame.sprite.Group()
 
 # Need to import sprites for the food, water, play, and sleep features
@@ -86,7 +90,7 @@ left_button_surface = pygame.Surface((50, 50), pygame.SRCALPHA)
 pygame.draw.polygon(left_button_surface, 'Red', [(25, 0), (0, 50), (50, 50)])
 left_button_surface.fill('Red')
 
-#
+# Create surface for the right button
 right_button_surface = pygame.Surface((50, 50))
 right_button_surface.fill('Red')
 
@@ -133,13 +137,14 @@ while running:
 
     screen.fill((0, 0, 0))  # Clear the screen with a black color
 
+    # Blit the background image
+    screen.blit(background_image, (0, 0))
+
     # Place four surfaces evenly across the screen for the food, water, play, and sleep features
     for i, surface in enumerate(surfaces):
         x_position = spacing * (i + 1) - surface.get_width() // 2
         y_position = screen_height // 8 - surface.get_height() // 2  # Position closer to the top
         screen.blit(surface, (x_position, y_position))
-
-
 
     # Update the age of the pet every 1 minute (60000 milliseconds)
     now = pygame.time.get_ticks()
@@ -151,7 +156,6 @@ while running:
     # Render the age text
     age_text = test_font.render(f"Pet age: {pet_age} years", True, (255, 255, 255))
     screen.blit(age_text, (10, 10))  # Position the text at the top-left corner
-
 
     # FIXME: make if-else statement backwards
     # Display the egg image if the pet's age is less than 1
@@ -181,11 +185,9 @@ while running:
     middle_button_x = screen_width // 2 - middle_button_surface.get_width() // 2
     middle_button_y = 7 * screen_height // 8 - middle_button_surface.get_height() // 2
 
-
     screen.blit(left_button_surface, (left_button_x, button_y))
     screen.blit(right_button_surface, (right_button_x, button_y))
     screen.blit(middle_button_surface, (middle_button_x, middle_button_y))
-    
 
     # Update the display
     pygame.display.flip()
