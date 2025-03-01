@@ -178,8 +178,9 @@ exit_button = Button(screen_width//2 - 100, screen_height//2 + 70, 200, 50, "Exi
 
 # Function to reset the game
 def reset_game():
-    global pet_age, game_state, last_age_update
+    global pet_age, game_state, last_age_update, pet_hunger
     pet_age = 0
+    pet_hunger = 100
     game_state = PLAYING
     last_age_update = pygame.time.get_ticks()
     all_sprites.empty()
@@ -194,6 +195,8 @@ old_komodo_sprite = AnimatedSprite(old_komodo_frames, screen_width // 2, screen_
 fly_sprite = FlySprite(fly_frames, screen_width // 2, screen_height // 3)
 all_sprites = pygame.sprite.Group(teenage_sprite, baby_komodo_sprite, old_komodo_sprite)
 all_sprites.add(fly_sprite)
+
+
 
 # Need to import sprites for the food, water, play, and sleep features
 
@@ -326,122 +329,126 @@ while running:
     # Place four surfaces evenly across the screen for the food, water, play, and sleep features
     for i, surface in enumerate(surfaces):
         x_position = spacing * (i + 1) - surface.get_width() // 2
-        y_position = screen_height // 8 - surface.get_height() // 2  # Position closer to the top
-        screen.blit(surface, (x_position, y_position))
+        if game_state == PLAYING:
+            y_position = screen_height // 8 - surface.get_height() // 2  # Position closer to the top
+            screen.blit(surface, (x_position, y_position))
 
 
-    # FIXME
-    # Update the age of the pet every 3 minute (3000 milliseconds)
-    now = pygame.time.get_ticks()
-    if now - last_age_update >= 1000: # Change back to 60000
-        pet_age += 1
-        last_age_update = now
-        print(f"Pet age: {pet_age} years")
 
-    # Render the age text
-    age_text = test_font.render(f"Pet age: {pet_age} years", True, (255, 255, 255))
-    screen.blit(age_text, (10, 10))  # Position the text at the top-left corner
+    if game_state == PLAYING:
+        # Update the age of the pet every 1 minute (60000 milliseconds)
+        now = pygame.time.get_ticks()
+        if now - last_age_update >= 1000:
+            pet_age += 1
+            last_age_update = now
+            print(f"Pet age: {pet_age} years")
 
-    # FIXME
-    # Update the hunger level of the pet every 4 seconds (4000 milliseconds)
-    if now - last_hunger_update >= 2000:
-        pet_hunger -= 10
-        last_hunger_update = now
-        print(f"Pet hunger: {pet_hunger}%")
+        # Render the age text
+        age_text = test_font.render(f"Pet age: {pet_age} years", True, (255, 255, 255))
+        screen.blit(age_text, (10, 10))  # Position the text at the top-left corner
 
-        # Check if pet has starved
-        if pet_hunger <= 0:
+        # Update the hunger level of the pet every 4 seconds (4000 milliseconds)
+        if now - last_hunger_update >= 500:
+            pet_hunger -= 10
+            last_hunger_update = now
+            print(f"Pet hunger: {pet_hunger}%")
+
+            # Ensure pet_hunger is not negative
+            if pet_hunger < 0:
+                pet_hunger = 0
+
+            # Check if pet has starved
+            if pet_hunger == 0:
+                game_state = GAME_OVER
+
+        # Render the hunger text
+        hunger_text = test_font.render(f"Pet hunger: {pet_hunger}%", True, (255, 255, 255))
+        screen.blit(hunger_text, (10, 40))  # Position the text below the age text
+
+        # Check if pet has reached end of life
+        if pet_age >= 30:
             game_state = GAME_OVER
 
-    # Render the hunger text
-    hunger_text = test_font.render(f"Pet hunger: {pet_hunger}%", True, (255, 255, 255))
-    screen.blit(hunger_text, (10, 40))  # Position the text below the age text
+        # Display the egg image if the pet's age is less than 1
+        all_sprites.empty()  # Clear all sprites from the group
 
-    # FIXME: make if-else statement backwards
-    # Display the egg image if the pet's age is less than 1
-    all_sprites.empty()  # Clear all sprites from the group
-
-    if pet_age < 1:
-        screen.blit(petEgg_surface, petEgg_surface.get_rect(center=(screen_width // 2, screen_height // 2 + 100)))
-    elif pet_age >= 1 and pet_age < 10:
-        all_sprites.add(baby_komodo_sprite)
-        all_sprites.update()
-        all_sprites.draw(screen)
-    elif pet_age >= 10 and pet_age < 20:
-        print("Pet is now a teenager!")
-        all_sprites.add(teenage_sprite)
-        all_sprites.update()
-        all_sprites.draw(screen)
-    elif pet_age >= 20 and pet_age < 30:
-        print("Pet is now an adult!")
-        all_sprites.add(old_komodo_sprite)
-        
-    elif pet_age >= 30:
-        game_state = GAME_OVER
-
-    # Update and draw all sprites
-        all_sprites.update()
-        all_sprites.draw(screen)
-    
-        if game_state == PLAYING:
-            # Place four surfaces evenly across the screen for the food, water, play, and sleep features
-            for i, surface in enumerate(surfaces):
-                x_position = spacing * (i + 1) - surface.get_width() // 2
-                y_position = screen_height // 8 - surface.get_height() // 2  # Position closer to the top
-                screen.blit(surface, (x_position, y_position))
-
-            # Update the age of the pet every 1 minute (60000 milliseconds)
-            now = pygame.time.get_ticks()
-            if now - last_age_update >= 1000:  # Change back to 60000
-                pet_age += 1
-                last_age_update = now
-                print(f"Pet age: {pet_age} years")
-
-                # Check if pet has reached end of life
-                if pet_age >= 30:
-                    game_state = GAME_OVER
-
-            # Render the age text
-            age_text = test_font.render(f"Pet age: {pet_age} years", True, (255, 255, 255))
-            screen.blit(age_text, (10, 10))  # Position the text at the top-left corner
-
-            # FIXME: make if-else statement backwards
-            # Display the egg image if the pet's age is less than 1
-            all_sprites.empty()  # Clear reptile sprites
-            all_sprites.add(fly_sprite)  # Always keep fly sprite
-
-            if pet_age < 1:
-                screen.blit(petEgg_surface, (screen_width // 2 - petEgg_surface.get_width() // 2, 
-                                            screen_height // 2 - petEgg_surface.get_height() // 2))
-            elif pet_age >= 1 and pet_age < 10:
-                all_sprites.add(baby_komodo_sprite)
-            elif pet_age >= 10 and pet_age < 30:
-                all_sprites.add(teenage_sprite)
-
-            # Update and draw all sprites
+        if pet_age < 1:
+            screen.blit(petEgg_surface, petEgg_surface.get_rect(center=(screen_width // 2, screen_height // 2 + 100)))
+        elif pet_age >= 1 and pet_age < 10:
+            all_sprites.add(baby_komodo_sprite)
             all_sprites.update()
             all_sprites.draw(screen)
+        elif pet_age >= 10 and pet_age < 20:
+            print("Pet is now a teenager!")
+            all_sprites.add(teenage_sprite)
+            all_sprites.update()
+            all_sprites.draw(screen)
+        elif pet_age >= 20 and pet_age < 30:
+            print("Pet is now an adult!")
+            all_sprites.add(old_komodo_sprite)
+            
+            all_sprites.update()
+            all_sprites.draw(screen)
+        
+            if game_state == PLAYING:
+                # Place four surfaces evenly across the screen for the food, water, play, and sleep features
+                for i, surface in enumerate(surfaces):
+                    x_position = spacing * (i + 1) - surface.get_width() // 2
+                    y_position = screen_height // 8 - surface.get_height() // 2  # Position closer to the top
+                    screen.blit(surface, (x_position, y_position))
 
-        elif game_state == GAME_OVER:
-            # Display Game Over screen
-            game_over_text = large_font.render("Game Over", True, (255, 0, 0))
-            screen.blit(game_over_text, (screen_width // 2 - game_over_text.get_width() // 2, screen_height // 4))
+                # Update the age of the pet every 1 minute (60000 milliseconds)
+                now = pygame.time.get_ticks()
+                if now - last_age_update >= 1000:  # Change back to 60000
+                    pet_age += 1
+                    last_age_update = now
+                    print(f"Pet age: {pet_age} years")
+
+                    # Check if pet has reached end of life
+                    if pet_age >= 30:
+                        game_state = GAME_OVER
+
+                # Render the age text
+                age_text = test_font.render(f"Pet age: {pet_age} years", True, (255, 255, 255))
+                screen.blit(age_text, (10, 10))  # Position the text at the top-left corner
+
+                # FIXME: make if-else statement backwards
+                # Display the egg image if the pet's age is less than 1
+                all_sprites.empty()  # Clear reptile sprites
+                all_sprites.add(fly_sprite)  # Always keep fly sprite
+
+                if pet_age < 1:
+                    screen.blit(petEgg_surface, (screen_width // 2 - petEgg_surface.get_width() // 2, 
+                                                screen_height // 2 - petEgg_surface.get_height() // 2))
+                elif pet_age >= 1 and pet_age < 10:
+                    all_sprites.add(baby_komodo_sprite)
+                elif pet_age >= 10 and pet_age < 30:
+                    all_sprites.add(teenage_sprite)
+
+                # Update and draw all sprites
+                all_sprites.update()
+                all_sprites.draw(screen)
+
+    if game_state == GAME_OVER:
+        # Display Game Over screen
+        game_over_text = large_font.render("Game Over", True, (255, 0, 0))
+        screen.blit(game_over_text, (screen_width // 2 - game_over_text.get_width() // 2, screen_height // 4))
+        
+        # Draw retry and exit buttons
+        retry_button.draw(screen)
+        exit_button.draw(screen)
     
-            # Draw retry and exit buttons
-            retry_button.draw(screen)
-            exit_button.draw(screen)
-    
-    # Place the buttons at the bottom of the screen
-    left_button_x = screen_width // 4 - left_button_surface.get_width() // 2
-    right_button_x = 3 * screen_width // 4 - right_button_surface.get_width() // 2
-    button_y = 7 * screen_height // 8 - left_button_surface.get_height() // 2
-    middle_button_x = screen_width // 2 - middle_button_surface.get_width() // 2
-    middle_button_y = 7 * screen_height // 8 - middle_button_surface.get_height() // 2
+    if game_state != GAME_OVER:
+        # Place the buttons at the bottom of the screen
+        left_button_x = screen_width // 4 - left_button_surface.get_width() // 2
+        right_button_x = 3 * screen_width // 4 - right_button_surface.get_width() // 2
+        button_y = 7 * screen_height // 8 - left_button_surface.get_height() // 2
+        middle_button_x = screen_width // 2 - middle_button_surface.get_width() // 2
+        middle_button_y = 7 * screen_height // 8 - middle_button_surface.get_height() // 2
 
-
-    screen.blit(left_button_surface, (left_button_x, button_y))
-    screen.blit(right_button_surface, (right_button_x, button_y))
-    screen.blit(middle_button_surface, (middle_button_x, middle_button_y))
+        screen.blit(left_button_surface, (left_button_x, button_y))
+        screen.blit(right_button_surface, (right_button_x, button_y))
+        screen.blit(middle_button_surface, (middle_button_x, middle_button_y))
     
 
     # Update the display
