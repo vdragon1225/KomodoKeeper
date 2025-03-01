@@ -12,6 +12,10 @@ pygame.display.set_caption("Reptile Pet Simulator")
 clock = pygame.time.Clock()
 test_font = pygame.font.Font(None, 24)
 
+# Load and scale the background image
+background_image = pygame.image.load('graphics/background.png').convert()
+background_image = pygame.transform.scale(background_image, (screen_width, screen_height))
+
 # Initialize the age of the pet
 pet_age = 0
 last_age_update = pygame.time.get_ticks()
@@ -32,9 +36,20 @@ baby_komodo_frames = [
     pygame.image.load('graphics/babyKomodo4.png').convert_alpha()
 ]
 
+# Load animation frames for old komodo
+old_komodo_frames = [
+    pygame.image.load('graphics/oldKomodo1.png').convert_alpha(),
+    pygame.image.load('graphics/oldKomodo2.png').convert_alpha(),
+    pygame.image.load('graphics/oldKomodo3.png').convert_alpha(),
+    pygame.image.load('graphics/oldKomodo4.png').convert_alpha(),
+    pygame.image.load('graphics/oldKomodo5.png').convert_alpha(),
+    pygame.image.load('graphics/oldKomodo6.png').convert_alpha()
+]
+
 # Scale frames to the desired size
 pet_frames = [pygame.transform.scale(frame, (250, 250)) for frame in teenage_frames]
 baby_komodo_frames = [pygame.transform.scale(frame, (250, 250)) for frame in baby_komodo_frames]
+old_komodo_frames = [pygame.transform.scale(frame, (250, 250)) for frame in old_komodo_frames]
 
 # Create an animated sprite
 class AnimatedSprite(pygame.sprite.Sprite):
@@ -55,9 +70,11 @@ class AnimatedSprite(pygame.sprite.Sprite):
             self.image = self.frames[self.current_frame]
 
 # Create an instance of the animated sprite
-teenage_sprite = AnimatedSprite(pet_frames, screen_width // 2, screen_height // 2)
-baby_komodo_sprite = AnimatedSprite(baby_komodo_frames, screen_width // 2, screen_height // 2)
-all_sprites = pygame.sprite.Group()
+
+teenage_sprite = AnimatedSprite(pet_frames, screen_width // 2, screen_height // 2 + 100)
+baby_komodo_sprite = AnimatedSprite(baby_komodo_frames, screen_width // 2, screen_height // 2 + 100)
+old_komodo_sprite = AnimatedSprite(old_komodo_frames, screen_width // 2, screen_height // 2 + 100)
+all_sprites = pygame.sprite.Group(teenage_sprite, baby_komodo_sprite, old_komodo_sprite)
 
 # Need to import sprites for the food, water, play, and sleep features
 
@@ -77,22 +94,32 @@ play_surface.fill('Green')  # Fill the surface with green
 sleep_surface = pygame.Surface((50, 50)) # Can add sprite later
 sleep_surface.fill('Purple')  # Fill the surface with purple
 
+# Create surfaces for the buttons
+left_button_surface = pygame.Surface((50, 50))
+left_button_surface.fill('White')
+
+right_button_surface = pygame.Surface((50, 50))
+right_button_surface.fill('White')
+
+middle_button_surface = pygame.Surface((50, 50))
+middle_button_surface.fill('White')
+
 # Create a surface for the pet and scale it to a larger size
 petEgg_surface = pygame.image.load('graphics/komodoEgg.png').convert_alpha()
 petEgg_surface = pygame.transform.scale(petEgg_surface, (250, 250))  # Scale to 100x100 pixels
 
-# Create surface for the left button
-left_button_surface = pygame.Surface((50, 50), pygame.SRCALPHA)
-pygame.draw.polygon(left_button_surface, 'Red', [(25, 0), (0, 50), (50, 50)])
-left_button_surface.fill('Red')
+# Remove the surfaces and just draw the polygons directly on the screen
+left_button_points = [(screen_width // 4 - 25, 7 * screen_height // 8 + 25), 
+                      (screen_width // 4 + 25, 7 * screen_height // 8 + 25), 
+                      (screen_width // 4, 7 * screen_height // 8 - 25)]
 
-#
-right_button_surface = pygame.Surface((50, 50))
-right_button_surface.fill('Red')
+right_button_points = [(3 * screen_width // 4 - 25, 7 * screen_height // 8 + 25), 
+                       (3 * screen_width // 4 + 25, 7 * screen_height // 8 + 25), 
+                       (3 * screen_width // 4, 7 * screen_height // 8 - 25)]
 
-# Create a surface for the middle button
-middle_button_surface = pygame.Surface((50, 50))
-middle_button_surface.fill('Red')
+middle_button_points = [(screen_width // 2 - 25, 7 * screen_height // 8 + 25), 
+                        (screen_width // 2 + 25, 7 * screen_height // 8 + 25), 
+                        (screen_width // 2, 7 * screen_height // 8 - 25)]
 
 # Calculate positions to place surfaces evenly across the screen
 surfaces = [food_surface, water_surface, play_surface, sleep_surface]
@@ -112,15 +139,14 @@ while running:
             left_button_points = [(screen_width // 4 - 25, 7 * screen_height // 8 + 25), 
                                   (screen_width // 4 + 25, 7 * screen_height // 8 + 25), 
                                   (screen_width // 4, 7 * screen_height // 8 - 25)]
-            left_button_rect = pygame.draw.polygon(screen, 'White', left_button_points)
-            if left_button_rect.collidepoint(mouse_pos):
+            if pygame.draw.polygon(screen, 'White', left_button_points).collidepoint(mouse_pos):
                 print("Left button clicked")
             # Check if the right button is clicked
             right_button_points = [(3 * screen_width // 4 - 25, 7 * screen_height // 8 + 25), 
                                    (3 * screen_width // 4 + 25, 7 * screen_height // 8 + 25), 
                                    (3 * screen_width // 4, 7 * screen_height // 8 - 25)]
             right_button_rect = pygame.draw.polygon(screen, 'White', right_button_points)
-            if right_button_rect.collidepoint(mouse_pos):
+            if pygame.draw.polygon(screen, 'White', right_button_points).collidepoint(mouse_pos):
                 print("Right button clicked")
 
             # Check if the middle button is clicked
@@ -130,8 +156,13 @@ while running:
             middle_button_rect = pygame.draw.polygon(screen, 'White', middle_button_points)
             if middle_button_rect.collidepoint(mouse_pos):
                 print("Middle button clicked")
-
+            if pygame.draw.polygon(screen, 'White', middle_button_points).collidepoint(mouse_pos):
+                print("Middle button clicked")
     screen.fill((0, 0, 0))  # Clear the screen with a black color
+
+    # Blit the background image
+    screen.blit(background_image, (0, 0))
+
 
     # Place four surfaces evenly across the screen for the food, water, play, and sleep features
     for i, surface in enumerate(surfaces):
@@ -158,7 +189,7 @@ while running:
     all_sprites.empty()  # Clear all sprites from the group
 
     if pet_age < 1:
-        screen.blit(petEgg_surface, (screen_width // 2 - petEgg_surface.get_width() // 2, screen_height // 2 - petEgg_surface.get_height() // 2))
+        screen.blit(petEgg_surface, petEgg_surface.get_rect(center=(screen_width // 2, screen_height // 2 + 100)))
     elif pet_age >= 1 and pet_age < 10:
         all_sprites.add(baby_komodo_sprite)
         all_sprites.update()
@@ -168,11 +199,14 @@ while running:
         all_sprites.add(teenage_sprite)
         all_sprites.update()
         all_sprites.draw(screen)
-    elif pet_age >= 20 and pet_age <= 30:
+    elif pet_age >= 20 and pet_age < 30:
         print("Pet is now an adult!")
-        # Add adult sprite handling here if needed
+        all_sprites.add(old_komodo_sprite)
         all_sprites.update()
         all_sprites.draw(screen)
+    else:
+        print("Pet has reached the maximum age.")
+        pet_age = 30  # Stop the age counter at 30
     
     # Place the buttons at the bottom of the screen
     left_button_x = screen_width // 4 - left_button_surface.get_width() // 2
