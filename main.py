@@ -14,11 +14,17 @@ pygame.display.set_caption("Reptile Pet Simulator")
 clock = pygame.time.Clock()
 test_font = pygame.font.Font(None, 24)
 large_font = pygame.font.Font(None, 48)
+title_font = pygame.font.Font(None, 64)
 
 # Game states
-PLAYING = 0
-GAME_OVER = 1
-game_state = PLAYING
+MENU = 0
+PLAYING = 1
+GAME_OVER = 2
+game_state = MENU
+
+# Add fly boundaries
+FLY_BOUNDARY_BOTTOM = 3 * screen_height // 4  # Flies can't go below this y-coordinate
+FLY_BOUNDARY_TOP = screen_height // 6 + 30  # Updated: Increased to keep flies away from top boxes
 
 # Load and scale the background image
 background_image = pygame.image.load('graphics/background.png').convert()
@@ -67,9 +73,9 @@ def extract_frames(sheet, frame_width, frame_height, num_frames):
 
 # Extract frames from the sprite sheet
 try:
-    fly_frames = extract_frames(sprite_sheet, 64, 64, 4)  # Assuming each frame is 64x64 pixels and there are 4 frames
+    fly_frames = extract_frames(sprite_sheet, 32, 32, 4)  # Assuming each frame is 64x64 pixels and there are 4 frames
     # Scale fly frames to make them smaller
-    fly_frames = [pygame.transform.scale(frame, (32, 32)) for frame in fly_frames]
+    fly_frames = [pygame.transform.scale(frame, (64, 64)) for frame in fly_frames]
 except ValueError as e:
     print(f"Error extracting frames: {e}")
     # Create placeholder fly frames if extraction fails
@@ -119,37 +125,52 @@ class FlySprite(AnimatedSprite):
         self.speed = 2
         self.direction = random.uniform(0, 2 * math.pi)  # Random direction in radians
         self.direction_change_time = pygame.time.get_ticks()
+        self.being_dragged = False
+        self.original_rect = self.rect.copy()
 
     def update(self):
         super().update()
+        
+        # Only move if not being dragged
+        if not self.being_dragged:
+            # Change direction randomly
+            now = pygame.time.get_ticks()
+            if now - self.direction_change_time > 500:  # Change direction every 0.5 seconds
+                self.direction += random.uniform(-math.pi/4, math.pi/4)  # Add small random change
+                self.direction_change_time = now
 
-        # Change direction randomly
-        now = pygame.time.get_ticks()
-        if now - self.direction_change_time > 500:  # Change direction every 0.5 seconds
-            self.direction += random.uniform(-math.pi/4, math.pi/4)  # Add small random change
-            self.direction_change_time = now
+            # Move in current direction
+            dx = self.speed * math.cos(self.direction)
+            dy = self.speed * math.sin(self.direction)
+            self.rect.x += dx
+            self.rect.y += dy
 
-        # Move in current direction
-        dx = self.speed * math.cos(self.direction)
-        dy = self.speed * math.sin(self.direction)
-        self.rect.x += dx
-        self.rect.y += dy
+            # Bounce off edges of screen and boundaries
+            if self.rect.left < 0:
+                self.rect.left = 0
+                self.direction = random.uniform(-math.pi/2, math.pi/2)
+            if self.rect.right > screen_width:
+                self.rect.right = screen_width
+                self.direction = random.uniform(math.pi/2, 3*math.pi/2)
+            if self.rect.top < FLY_BOUNDARY_TOP:
+                self.rect.top = FLY_BOUNDARY_TOP
+                self.direction = random.uniform(0, math.pi)  # Force direction downward
+            if self.rect.bottom > FLY_BOUNDARY_BOTTOM:
+                self.rect.bottom = FLY_BOUNDARY_BOTTOM
+                self.direction = random.uniform(math.pi, 2*math.pi)  # Force direction upward
 
-        # Bounce off edges of screen
-        if self.rect.left < 0:
-            self.rect.left = 0
-            self.direction = random.uniform(-math.pi/2, math.pi/2)
-        if self.rect.right > screen_width:
-            self.rect.right = screen_width
-            self.direction = random.uniform(math.pi/2, 3*math.pi/2)
-        if self.rect.top < 0:
-            self.rect.top = 0
-            self.direction = random.uniform(0, math.pi)
-        if self.rect.bottom > screen_height:
-            self.rect.bottom = screen_height
-            self.direction = random.uniform(math.pi, 2*math.pi)
+    def start_drag(self):
+        self.being_dragged = True
+        self.original_rect = self.rect.copy()
+    
+    def update_drag_position(self, pos):
+        if self.being_dragged:
+            self.rect.center = pos
+    
+    def stop_drag(self):
+        self.being_dragged = False
 
-# Create button class for Game Over screen
+# Create button class for Menu and Game Over screens
 class Button:
     def __init__(self, x, y, width, height, text, color, hover_color):
         self.rect = pygame.Rect(x, y, width, height)
@@ -172,81 +193,61 @@ class Button:
         self.current_color = self.color
         return False
 
+# Create buttons for Menu screen
+play_button = Button(screen_width//2 - 100, screen_height//2, 200, 50, "Play", (0, 150, 0), (0, 200, 0))
+quit_button = Button(screen_width//2 - 100, screen_height//2 + 70, 200, 50, "Quit", (150, 0, 0), (200, 0, 0))
+
 # Create buttons for Game Over screen
 retry_button = Button(screen_width//2 - 100, screen_height//2, 200, 50, "Retry", (0, 150, 0), (0, 200, 0))
 exit_button = Button(screen_width//2 - 100, screen_height//2 + 70, 200, 50, "Exit", (150, 0, 0), (200, 0, 0))
 
+# Create an instance of the animated sprite
+teenage_sprite = AnimatedSprite(pet_frames, screen_width // 2, screen_height // 2 + 100)
+baby_komodo_sprite = AnimatedSprite(baby_komodo_frames, screen_width // 2, screen_height // 2 + 100)
+old_komodo_sprite = AnimatedSprite(old_komodo_frames, screen_width // 2, screen_height // 2 + 100)
+
+# Create fly sprites
+fly_sprites = pygame.sprite.Group()
+
+def create_fly():
+    fly = FlySprite(fly_frames, 
+                    random.randint(50, screen_width - 50), 
+                    random.randint(FLY_BOUNDARY_TOP + 20, FLY_BOUNDARY_BOTTOM - 20))
+    fly_sprites.add(fly)
+
+# No menu flies as per requirement
+menu_flies = pygame.sprite.Group()
+
+all_sprites = pygame.sprite.Group()
+
+# Define box sizes and colors for the top boxes
+box_size = 50
+box_colors = ['Red', 'Blue', 'Green', 'Purple']  # Colors for food, water, play, sleep
+box_rects = []
+
+# Calculate positions to place boxes evenly across the screen
+box_spacing = screen_width // 5
+box_y = screen_height // 8 - box_size // 2  # Position closer to the top
+
 # Function to reset the game
 def reset_game():
-    global pet_age, game_state, last_age_update, pet_hunger
+    global pet_age, pet_hunger, game_state, last_age_update, last_hunger_update
     pet_age = 0
     pet_hunger = 100
     game_state = PLAYING
     last_age_update = pygame.time.get_ticks()
-    all_sprites.empty()
-    if fly_sprite:
-        all_sprites.add(fly_sprite)
-
-# Create an instance of the animated sprite
-
-teenage_sprite = AnimatedSprite(pet_frames, screen_width // 2, screen_height // 2 + 100)
-baby_komodo_sprite = AnimatedSprite(baby_komodo_frames, screen_width // 2, screen_height // 2 + 100)
-old_komodo_sprite = AnimatedSprite(old_komodo_frames, screen_width // 2, screen_height // 2 + 100)
-fly_sprite = FlySprite(fly_frames, screen_width // 2, screen_height // 3)
-all_sprites = pygame.sprite.Group(teenage_sprite, baby_komodo_sprite, old_komodo_sprite)
-all_sprites.add(fly_sprite)
-
-
-
-# Need to import sprites for the food, water, play, and sleep features
-
-# Create a surface for the food
-food_surface = pygame.Surface((50, 50)) # Can add sprite later
-food_surface.fill('Red')  # Fill the surface with red
-
-# Create a surface for the Water
-water_surface = pygame.Surface((50, 50)) # Can add sprite later
-water_surface.fill('Blue')  # Fill the surface with blue
-
-# Create a surface for the play feature
-play_surface = pygame.Surface((50, 50)) # Can add sprite later
-play_surface.fill('Green')  # Fill the surface with green
-
-# Create a surface for the sleep feature
-sleep_surface = pygame.Surface((50, 50)) # Can add sprite later
-sleep_surface.fill('Purple')  # Fill the surface with purple
-
-# Create surfaces for the buttons
-left_button_surface = pygame.Surface((50, 50))
-left_button_surface.fill('White')
-
-right_button_surface = pygame.Surface((50, 50))
-right_button_surface.fill('White')
-
-middle_button_surface = pygame.Surface((50, 50))
-middle_button_surface.fill('White')
+    last_hunger_update = pygame.time.get_ticks()
+    
+    # Clear and create just ONE fly at the start
+    fly_sprites.empty()
+    create_fly()
 
 # Create a surface for the pet and scale it to a larger size
 petEgg_surface = pygame.image.load('graphics/komodoEgg.png').convert_alpha()
 petEgg_surface = pygame.transform.scale(petEgg_surface, (250, 250))  # Scale to 250x250 pixels
 
-# Remove the surfaces and just draw the polygons directly on the screen
-left_button_points = [(screen_width // 4 - 25, 7 * screen_height // 8 + 25), 
-                      (screen_width // 4 + 25, 7 * screen_height // 8 + 25), 
-                      (screen_width // 4, 7 * screen_height // 8 - 25)]
-
-right_button_points = [(3 * screen_width // 4 - 25, 7 * screen_height // 8 + 25), 
-                       (3 * screen_width // 4 + 25, 7 * screen_height // 8 + 25), 
-                       (3 * screen_width // 4, 7 * screen_height // 8 - 25)]
-
-middle_button_points = [(screen_width // 2 - 25, 7 * screen_height // 8 + 25), 
-                        (screen_width // 2 + 25, 7 * screen_height // 8 + 25), 
-                        (screen_width // 2, 7 * screen_height // 8 - 25)]
-
-# Calculate positions to place surfaces evenly across the screen
-surfaces = [food_surface, water_surface, play_surface, sleep_surface]
-num_surfaces = len(surfaces)
-spacing = screen_width // (num_surfaces + 1)
+# Variables for drag and drop functionality
+dragging_fly = None
 
 # Main game loop
 running = True
@@ -255,202 +256,232 @@ while running:
         if event.type == pygame.QUIT:
             pygame.quit()
             exit()
+        
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = event.pos
-            # Check if the left button is clicked
-            left_button_points = [(screen_width // 4 - 25, 7 * screen_height // 8 + 25), 
-                                  (screen_width // 4 + 25, 7 * screen_height // 8 + 25), 
-                                  (screen_width // 4, 7 * screen_height // 8 - 25)]
-            if pygame.draw.polygon(screen, 'White', left_button_points).collidepoint(mouse_pos):
-                print("Left button clicked")
-            # Check if the right button is clicked
-            right_button_points = [(3 * screen_width // 4 - 25, 7 * screen_height // 8 + 25), 
-                                   (3 * screen_width // 4 + 25, 7 * screen_height // 8 + 25), 
-                                   (3 * screen_width // 4, 7 * screen_height // 8 - 25)]
-            right_button_rect = pygame.draw.polygon(screen, 'White', right_button_points)
-            if pygame.draw.polygon(screen, 'White', right_button_points).collidepoint(mouse_pos):
-                print("Right button clicked")
-
-            # Check if the middle button is clicked
-            middle_button_points = [(screen_width // 2 - 25, 7 * screen_height // 8 + 25), 
-                                    (screen_width // 2 + 25, 7 * screen_height // 8 + 25), 
-                                    (screen_width // 2, 7 * screen_height // 8 - 25)]
-            middle_button_rect = pygame.draw.polygon(screen, 'White', middle_button_points)
-            if middle_button_rect.collidepoint(mouse_pos):
-                print("Middle button clicked")
-            if pygame.draw.polygon(screen, 'White', middle_button_points).collidepoint(mouse_pos):
-                print("Middle button clicked")
-                pet_hunger = 100 # Reset the hunger level to 100
-
-            if game_state == GAME_OVER:
-                # Check if retry button is clicked
+            
+            if game_state == MENU:
+                # Check menu buttons
+                if play_button.rect.collidepoint(mouse_pos):
+                    game_state = PLAYING
+                    reset_game()
+                elif quit_button.rect.collidepoint(mouse_pos):
+                    pygame.quit()
+                    exit()
+            
+            elif game_state == GAME_OVER:
+                # Check game over buttons
                 if retry_button.rect.collidepoint(mouse_pos):
                     reset_game()
-                # Check if exit button is clicked
                 elif exit_button.rect.collidepoint(mouse_pos):
                     pygame.quit()
                     exit()
-            else:
-                # Game is playing, check normal buttons
-                # Check if the left button is clicked
-                left_button_points = [(screen_width // 4 - 25, 7 * screen_height // 8 + 25), 
-                                    (screen_width // 4 + 25, 7 * screen_height // 8 + 25), 
-                                    (screen_width // 4, 7 * screen_height // 8 - 25)]
-                left_button_rect = pygame.draw.polygon(screen, 'White', left_button_points)
-                if left_button_rect.collidepoint(mouse_pos):
-                    print("Left button clicked")
-                # Check if the right button is clicked
-                right_button_points = [(3 * screen_width // 4 - 25, 7 * screen_height // 8 + 25), 
-                                    (3 * screen_width // 4 + 25, 7 * screen_height // 8 + 25), 
-                                    (3 * screen_width // 4, 7 * screen_height // 8 - 25)]
-                right_button_rect = pygame.draw.polygon(screen, 'White', right_button_points)
-                if right_button_rect.collidepoint(mouse_pos):
-                    print("Right button clicked")
-
-                # Check if the middle button is clicked
-                middle_button_points = [(screen_width // 2 - 25, 7 * screen_height // 8 + 25), 
-                                        (screen_width // 2 + 25, 7 * screen_height // 8 + 25), 
-                                        (screen_width // 2, 7 * screen_height // 8 - 25)]
-                middle_button_rect = pygame.draw.polygon(screen, 'White', middle_button_points)
-                if middle_button_rect.collidepoint(mouse_pos):
-                    print("Middle button clicked")
-
-        # Track mouse for button hover effects
-        elif event.type == pygame.MOUSEMOTION and game_state == GAME_OVER:
+            
+            elif game_state == PLAYING:
+                # Check if a fly is clicked
+                for fly in fly_sprites:
+                    if fly.rect.collidepoint(mouse_pos):
+                        dragging_fly = fly
+                        fly.start_drag()
+                        break
+                
+                # If not dragging a fly, check if control buttons are clicked
+                if not dragging_fly:
+                    # Left arrow button
+                    left_arrow_rect = pygame.Rect(screen_width // 4 - 20, 7 * screen_height // 8 - 15, 40, 30)
+                    if left_arrow_rect.collidepoint(mouse_pos):
+                        print("Left arrow clicked")
+                    
+                    # Circle button
+                    circle_center = (screen_width // 2, 7 * screen_height // 8)
+                    if math.sqrt((mouse_pos[0] - circle_center[0])**2 + (mouse_pos[1] - circle_center[1])**2) < 20:
+                        print("Circle button clicked")
+                    
+                    # Right arrow button
+                    right_arrow_rect = pygame.Rect(3 * screen_width // 4 - 20, 7 * screen_height // 8 - 15, 40, 30)
+                    if right_arrow_rect.collidepoint(mouse_pos):
+                        print("Right arrow clicked")
+        
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if dragging_fly:
+                # Check if the fly is dropped over the lizard
+                current_lizard = None
+                if pet_age < 1:
+                    lizard_rect = petEgg_surface.get_rect(center=(screen_width // 2, screen_height // 2 + 100))
+                    if lizard_rect.collidepoint(mouse_pos):
+                        print("Fed the egg!")
+                        pet_hunger = min(pet_hunger + 20, 100)
+                        dragging_fly.kill()
+                        # Create ONE new fly to replace the eaten one
+                        create_fly()
+                        # Create ONE additional fly
+                        create_fly()
+                        dragging_fly = None
+                else:
+                    # Check which lizard sprite to use based on age
+                    if pet_age < 10:
+                        current_lizard = baby_komodo_sprite
+                    elif pet_age < 20:
+                        current_lizard = teenage_sprite
+                    else:
+                        current_lizard = old_komodo_sprite
+                    
+                    if current_lizard and current_lizard.rect.collidepoint(mouse_pos):
+                        print("Fed the lizard!")
+                        pet_hunger = min(pet_hunger + 20, 100)
+                        dragging_fly.kill()
+                        # Create ONE new fly to replace the eaten one
+                        create_fly()
+                        # Create ONE additional fly
+                        create_fly()
+                        dragging_fly = None
+                
+                # If not dropped on lizard, return fly to original position
+                if dragging_fly:
+                    dragging_fly.stop_drag()
+                    dragging_fly = None
+        
+        elif event.type == pygame.MOUSEMOTION:
             mouse_pos = event.pos
-            retry_button.is_hovered(mouse_pos)
-            exit_button.is_hovered(mouse_pos)
-    screen.fill((0, 0, 0))  # Clear the screen with a black color
-
-    # Blit the background image
+            
+            # Update button hover states
+            if game_state == MENU:
+                play_button.is_hovered(mouse_pos)
+                quit_button.is_hovered(mouse_pos)
+            elif game_state == GAME_OVER:
+                retry_button.is_hovered(mouse_pos)
+                exit_button.is_hovered(mouse_pos)
+            
+            # Update dragged fly position
+            if dragging_fly:
+                dragging_fly.update_drag_position(mouse_pos)
+    
+    # Clear the screen
+    screen.fill((0, 0, 0))
+    
+    # Draw background
     screen.blit(background_image, (0, 0))
-
-
-    # Place four surfaces evenly across the screen for the food, water, play, and sleep features
-    for i, surface in enumerate(surfaces):
-        x_position = spacing * (i + 1) - surface.get_width() // 2
-        if game_state == PLAYING:
-            y_position = screen_height // 8 - surface.get_height() // 2  # Position closer to the top
-            screen.blit(surface, (x_position, y_position))
-
-
-
-    if game_state == PLAYING:
-        # Update the age of the pet every 1 minute (60000 milliseconds)
+    
+    # Menu state
+    if game_state == MENU:
+        # NO menu flies as per requirement
+        
+        # Draw a semi-transparent overlay to make text more readable
+        overlay = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 128))  # Semi-transparent black
+        screen.blit(overlay, (0, 0))
+        
+        # Draw title
+        title_text = title_font.render("Reptile Pet Simulator", True, (255, 255, 255))
+        title_rect = title_text.get_rect(center=(screen_width // 2, screen_height // 4))
+        screen.blit(title_text, title_rect)
+        
+        # Draw pet egg for decoration
+        menu_pet = pygame.transform.scale(petEgg_surface, (150, 150))
+        screen.blit(menu_pet, menu_pet.get_rect(center=(screen_width // 2, screen_height // 3 + 50)))
+        
+        # Add game description
+        desc_text = test_font.render("Take care of your reptile pet and watch it grow!", True, (255, 255, 255))
+        desc_rect = desc_text.get_rect(center=(screen_width // 2, screen_height // 2 - 30))
+        screen.blit(desc_text, desc_rect)
+        
+        # Draw buttons
+        play_button.draw(screen)
+        quit_button.draw(screen)
+    
+    # Playing state
+    elif game_state == PLAYING:
+        # Update the age of the pet every 1 second (for demo, change to 60000 for production)
         now = pygame.time.get_ticks()
         if now - last_age_update >= 1000:
             pet_age += 1
             last_age_update = now
             print(f"Pet age: {pet_age} years")
-
-        # Render the age text
-        age_text = test_font.render(f"Pet age: {pet_age} years", True, (255, 255, 255))
-        screen.blit(age_text, (10, 10))  # Position the text at the top-left corner
-
-        # Update the hunger level of the pet every 4 seconds (4000 milliseconds)
-        if now - last_hunger_update >= 500:
-            pet_hunger -= 10
+            
+            # Check if pet has reached end of life
+            if pet_age >= 30:
+                game_state = GAME_OVER
+        
+        # Update the hunger level
+        if now - last_hunger_update >= 2000:
+            pet_hunger = max(0, pet_hunger - 10)
             last_hunger_update = now
             print(f"Pet hunger: {pet_hunger}%")
-
-            # Ensure pet_hunger is not negative
-            if pet_hunger < 0:
-                pet_hunger = 0
-
+            
             # Check if pet has starved
-            if pet_hunger == 0:
+            if pet_hunger <= 0:
                 game_state = GAME_OVER
-
-        # Render the hunger text
+        
+        # Render the age and hunger text
+        age_text = test_font.render(f"Pet age: {pet_age} years", True, (255, 255, 255))
         hunger_text = test_font.render(f"Pet hunger: {pet_hunger}%", True, (255, 255, 255))
-        screen.blit(hunger_text, (10, 40))  # Position the text below the age text
-
-        # Check if pet has reached end of life
-        if pet_age >= 30:
-            game_state = GAME_OVER
-
-        # Display the egg image if the pet's age is less than 1
-        all_sprites.empty()  # Clear all sprites from the group
-
+        screen.blit(age_text, (10, 10))
+        screen.blit(hunger_text, (10, 40))
+        
+        # Place four boxes evenly across the screen
+        box_rects = []
+        for i in range(4):
+            x_position = box_spacing * (i + 1) - box_size // 2
+            box_rect = pygame.Rect(x_position, box_y, box_size, box_size)
+            box_rects.append(box_rect)
+            pygame.draw.rect(screen, box_colors[i], box_rect)
+            pygame.draw.rect(screen, 'White', box_rect, 2)  # White border for visibility
+        
+        # Display the appropriate pet sprite based on age
+        all_sprites.empty()
+        
         if pet_age < 1:
             screen.blit(petEgg_surface, petEgg_surface.get_rect(center=(screen_width // 2, screen_height // 2 + 100)))
-        elif pet_age >= 1 and pet_age < 10:
+        elif pet_age < 10:
             all_sprites.add(baby_komodo_sprite)
-            all_sprites.update()
-            all_sprites.draw(screen)
-        elif pet_age >= 10 and pet_age < 20:
-            print("Pet is now a teenager!")
+        elif pet_age < 20:
             all_sprites.add(teenage_sprite)
-            all_sprites.update()
-            all_sprites.draw(screen)
-        elif pet_age >= 20 and pet_age < 30:
-            print("Pet is now an adult!")
+        else:
             all_sprites.add(old_komodo_sprite)
-            
-            all_sprites.update()
-            all_sprites.draw(screen)
         
-            if game_state == PLAYING:
-                # Place four surfaces evenly across the screen for the food, water, play, and sleep features
-                for i, surface in enumerate(surfaces):
-                    x_position = spacing * (i + 1) - surface.get_width() // 2
-                    y_position = screen_height // 8 - surface.get_height() // 2  # Position closer to the top
-                    screen.blit(surface, (x_position, y_position))
+        # Update and draw all sprites
+        all_sprites.update()
+        all_sprites.draw(screen)
+        
+        # Update and draw flies
+        fly_sprites.update()
+        fly_sprites.draw(screen)
+        
+        # Optionally draw boundaries for debugging
+        # pygame.draw.line(screen, (255, 0, 0), (0, FLY_BOUNDARY_TOP), (screen_width, FLY_BOUNDARY_TOP), 1)
+        # pygame.draw.line(screen, (255, 0, 0), (0, FLY_BOUNDARY_BOTTOM), (screen_width, FLY_BOUNDARY_BOTTOM), 1)
+        pygame.draw.polygon(screen, 'White', [
+            (screen_width // 4 - 20, 7 * screen_height // 8),  # Left point
+            (screen_width // 4 + 10, 7 * screen_height // 8 - 15),  # Top-right
+            (screen_width // 4 + 10, 7 * screen_height // 8 + 15)   # Bottom-right
+        ])
 
-                # Update the age of the pet every 1 minute (60000 milliseconds)
-                now = pygame.time.get_ticks()
-                if now - last_age_update >= 1000:  # Change back to 60000
-                    pet_age += 1
-                    last_age_update = now
-                    print(f"Pet age: {pet_age} years")
+        # Middle circle
+        pygame.draw.circle(screen, 'White', (screen_width // 2, 7 * screen_height // 8), 20)
 
-                    # Check if pet has reached end of life
-                    if pet_age >= 30:
-                        game_state = GAME_OVER
-
-                # Render the age text
-                age_text = test_font.render(f"Pet age: {pet_age} years", True, (255, 255, 255))
-                screen.blit(age_text, (10, 10))  # Position the text at the top-left corner
-
-                # FIXME: make if-else statement backwards
-                # Display the egg image if the pet's age is less than 1
-                all_sprites.empty()  # Clear reptile sprites
-                all_sprites.add(fly_sprite)  # Always keep fly sprite
-
-                if pet_age < 1:
-                    screen.blit(petEgg_surface, (screen_width // 2 - petEgg_surface.get_width() // 2, 
-                                                screen_height // 2 - petEgg_surface.get_height() // 2))
-                elif pet_age >= 1 and pet_age < 10:
-                    all_sprites.add(baby_komodo_sprite)
-                elif pet_age >= 10 and pet_age < 30:
-                    all_sprites.add(teenage_sprite)
-
-                # Update and draw all sprites
-                all_sprites.update()
-                all_sprites.draw(screen)
-
-    if game_state == GAME_OVER:
-        # Display Game Over screen
+        # Right arrow (pointing right)
+        pygame.draw.polygon(screen, 'White', [
+            (3 * screen_width // 4 + 20, 7 * screen_height // 8),  # Right point
+            (3 * screen_width // 4 - 10, 7 * screen_height // 8 - 15),  # Top-left
+            (3 * screen_width // 4 - 10, 7 * screen_height // 8 + 15)   # Bottom-left
+        ])
+    
+    # Game over state
+    elif game_state == GAME_OVER:
+        # Display game over message
         game_over_text = large_font.render("Game Over", True, (255, 0, 0))
-        screen.blit(game_over_text, (screen_width // 2 - game_over_text.get_width() // 2, screen_height // 4))
+        game_over_rect = game_over_text.get_rect(center=(screen_width // 2, screen_height // 4))
+        screen.blit(game_over_text, game_over_rect)
         
-        # Draw retry and exit buttons
+        # Display final stats
+        final_age_text = test_font.render(f"Your pet lived to {pet_age} years old", True, (255, 255, 255))
+        final_age_rect = final_age_text.get_rect(center=(screen_width // 2, screen_height // 3))
+        screen.blit(final_age_text, final_age_rect)
+        
+        # Draw buttons
         retry_button.draw(screen)
         exit_button.draw(screen)
     
-    if game_state != GAME_OVER:
-        # Place the buttons at the bottom of the screen
-        left_button_x = screen_width // 4 - left_button_surface.get_width() // 2
-        right_button_x = 3 * screen_width // 4 - right_button_surface.get_width() // 2
-        button_y = 7 * screen_height // 8 - left_button_surface.get_height() // 2
-        middle_button_x = screen_width // 2 - middle_button_surface.get_width() // 2
-        middle_button_y = 7 * screen_height // 8 - middle_button_surface.get_height() // 2
-
-        screen.blit(left_button_surface, (left_button_x, button_y))
-        screen.blit(right_button_surface, (right_button_x, button_y))
-        screen.blit(middle_button_surface, (middle_button_x, middle_button_y))
-    
-
     # Update the display
     pygame.display.flip()
     clock.tick(60)  # Limit the frame rate to 60 FPS
