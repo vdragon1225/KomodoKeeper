@@ -329,8 +329,9 @@ while running:
     # Place four surfaces evenly across the screen for the food, water, play, and sleep features
     for i, surface in enumerate(surfaces):
         x_position = spacing * (i + 1) - surface.get_width() // 2
-        y_position = screen_height // 8 - surface.get_height() // 2  # Position closer to the top
-        screen.blit(surface, (x_position, y_position))
+        if game_state == PLAYING:
+            y_position = screen_height // 8 - surface.get_height() // 2  # Position closer to the top
+            screen.blit(surface, (x_position, y_position))
 
 
 
