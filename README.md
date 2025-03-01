@@ -73,4 +73,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📬 Contact
 
 - Symere - kccup 
-- Daniel Lai - vdragon1225
+- Daniel Lai -
+- Kusuma Wahana - KusumaWa
