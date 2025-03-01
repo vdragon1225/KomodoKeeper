@@ -155,17 +155,17 @@ while running:
 
     # FIXME: make if-else statement backwards
     # Display the egg image if the pet's age is less than 1
+    all_sprites.empty()  # Clear all sprites from the group
+
     if pet_age < 1:
         screen.blit(petEgg_surface, (screen_width // 2 - petEgg_surface.get_width() // 2, screen_height // 2 - petEgg_surface.get_height() // 2))
     elif pet_age >= 1 and pet_age < 10:
-        if baby_komodo_sprite not in all_sprites:
-            all_sprites.add(baby_komodo_sprite)
+        all_sprites.add(baby_komodo_sprite)
         all_sprites.update()
         all_sprites.draw(screen)
     elif pet_age >= 10 and pet_age < 20:
         print("Pet is now a teenager!")
-        if teenage_sprite not in all_sprites:
-            all_sprites.add(teenage_sprite)
+        all_sprites.add(teenage_sprite)
         all_sprites.update()
         all_sprites.draw(screen)
     elif pet_age >= 20 and pet_age <= 30:
@@ -173,7 +173,6 @@ while running:
         # Add adult sprite handling here if needed
         all_sprites.update()
         all_sprites.draw(screen)
-    
     
     # Place the buttons at the bottom of the screen
     left_button_x = screen_width // 4 - left_button_surface.get_width() // 2
