@@ -372,7 +372,8 @@ while running:
         screen.blit(overlay, (0, 0))
         
         # Draw title
-        title_text = title_font.render("Reptile Pet Simulator", True, (255, 255, 255))
+        smaller_title_font = pygame.font.Font(None, 48)  # Smaller than the original 64
+        title_text = smaller_title_font.render("Reptile Pet Simulator", True, (255, 255, 255))
         title_rect = title_text.get_rect(center=(screen_width // 2, screen_height // 4))
         screen.blit(title_text, title_rect)
         
@@ -382,7 +383,7 @@ while running:
         
         # Add game description
         desc_text = test_font.render("Take care of your reptile pet and watch it grow!", True, (255, 255, 255))
-        desc_rect = desc_text.get_rect(center=(screen_width // 2, screen_height // 2 - 30))
+        desc_rect = desc_text.get_rect(center=(screen_width // 2, screen_height // 2 - 95))
         screen.blit(desc_text, desc_rect)
         
         # Draw buttons
