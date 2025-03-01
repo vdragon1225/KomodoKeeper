@@ -12,16 +12,29 @@ pygame.display.set_caption("Reptile Pet Simulator")
 clock = pygame.time.Clock()
 test_font = pygame.font.Font(None, 24)
 
+# Initialize the age of the pet
+pet_age = 0
+last_age_update = pygame.time.get_ticks()
+
 # Load animation frames
-pet_frames = [
+teenage_frames = [
     pygame.image.load('graphics/komodoWalking1.png').convert_alpha(),
     pygame.image.load('graphics/komodoWalking2.png').convert_alpha(),
     pygame.image.load('graphics/komodoWalking3.png').convert_alpha(),
     pygame.image.load('graphics/komodoWalking4.png').convert_alpha()
 ]
 
+# Load animation frames for baby Komodo
+baby_komodo_frames = [
+    pygame.image.load('graphics/babyKomodo1.png').convert_alpha(),
+    pygame.image.load('graphics/babyKomodo2.png').convert_alpha(),
+    pygame.image.load('graphics/babyKomodo3.png').convert_alpha(),
+    pygame.image.load('graphics/babyKomodo4.png').convert_alpha()
+]
+
 # Scale frames to the desired size
-pet_frames = [pygame.transform.scale(frame, (250, 250)) for frame in pet_frames]
+pet_frames = [pygame.transform.scale(frame, (250, 250)) for frame in teenage_frames]
+baby_komodo_frames = [pygame.transform.scale(frame, (250, 250)) for frame in baby_komodo_frames]
 
 # Create an animated sprite
 class AnimatedSprite(pygame.sprite.Sprite):
@@ -42,8 +55,9 @@ class AnimatedSprite(pygame.sprite.Sprite):
             self.image = self.frames[self.current_frame]
 
 # Create an instance of the animated sprite
-pet_sprite = AnimatedSprite(pet_frames, screen_width // 2, screen_height // 2)
-all_sprites = pygame.sprite.Group(pet_sprite)
+teenage_sprite = AnimatedSprite(pet_frames, screen_width // 2, screen_height // 2)
+baby_komodo_sprite = AnimatedSprite(baby_komodo_frames, screen_width // 2, screen_height // 2)
+all_sprites = pygame.sprite.Group()
 
 # Need to import sprites for the food, water, play, and sleep features
 
@@ -64,11 +78,12 @@ sleep_surface = pygame.Surface((50, 50)) # Can add sprite later
 sleep_surface.fill('Purple')  # Fill the surface with purple
 
 # Create a surface for the pet and scale it to a larger size
-pet_surface = pygame.image.load('graphics/komodoEgg.png').convert_alpha()
-pet_surface = pygame.transform.scale(pet_surface, (250, 250))  # Scale to 100x100 pixels
+petEgg_surface = pygame.image.load('graphics/komodoEgg.png').convert_alpha()
+petEgg_surface = pygame.transform.scale(petEgg_surface, (250, 250))  # Scale to 100x100 pixels
 
 # Create surface for the left button
-left_button_surface = pygame.Surface((50, 50))
+left_button_surface = pygame.Surface((50, 50), pygame.SRCALPHA)
+pygame.draw.polygon(left_button_surface, 'Red', [(25, 0), (0, 50), (50, 50)])
 left_button_surface.fill('Red')
 
 #
@@ -124,12 +139,42 @@ while running:
         y_position = screen_height // 8 - surface.get_height() // 2  # Position closer to the top
         screen.blit(surface, (x_position, y_position))
 
-    # Update and draw all sprites
-    all_sprites.update()
-    all_sprites.draw(screen)
 
-    # The pet_surface is not needed anymore as we have the animated sprite
 
+    # Update the age of the pet every 1 minute (60000 milliseconds)
+    now = pygame.time.get_ticks()
+    if now - last_age_update >= 1000: # Change back to 60000
+        pet_age += 1
+        last_age_update = now
+        print(f"Pet age: {pet_age} years")
+
+    # Render the age text
+    age_text = test_font.render(f"Pet age: {pet_age} years", True, (255, 255, 255))
+    screen.blit(age_text, (10, 10))  # Position the text at the top-left corner
+
+
+    # FIXME: make if-else statement backwards
+    # Display the egg image if the pet's age is less than 1
+    if pet_age < 1:
+        screen.blit(petEgg_surface, (screen_width // 2 - petEgg_surface.get_width() // 2, screen_height // 2 - petEgg_surface.get_height() // 2))
+    elif pet_age >= 1 and pet_age < 10:
+        if baby_komodo_sprite not in all_sprites:
+            all_sprites.add(baby_komodo_sprite)
+        all_sprites.update()
+        all_sprites.draw(screen)
+    elif pet_age >= 10 and pet_age < 20:
+        print("Pet is now a teenager!")
+        if teenage_sprite not in all_sprites:
+            all_sprites.add(teenage_sprite)
+        all_sprites.update()
+        all_sprites.draw(screen)
+    elif pet_age >= 20 and pet_age <= 30:
+        print("Pet is now an adult!")
+        # Add adult sprite handling here if needed
+        all_sprites.update()
+        all_sprites.draw(screen)
+    
+    
     # Place the buttons at the bottom of the screen
     left_button_x = screen_width // 4 - left_button_surface.get_width() // 2
     right_button_x = 3 * screen_width // 4 - right_button_surface.get_width() // 2
