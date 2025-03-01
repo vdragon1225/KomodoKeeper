@@ -12,6 +12,39 @@ pygame.display.set_caption("Reptile Pet Simulator")
 clock = pygame.time.Clock()
 test_font = pygame.font.Font(None, 24)
 
+# Load animation frames
+pet_frames = [
+    pygame.image.load('graphics/komodoWalking1.png').convert_alpha(),
+    pygame.image.load('graphics/komodoWalking2.png').convert_alpha(),
+    pygame.image.load('graphics/komodoWalking3.png').convert_alpha(),
+    pygame.image.load('graphics/komodoWalking4.png').convert_alpha()
+]
+
+# Scale frames to the desired size
+pet_frames = [pygame.transform.scale(frame, (250, 250)) for frame in pet_frames]
+
+# Create an animated sprite
+class AnimatedSprite(pygame.sprite.Sprite):
+    def __init__(self, frames, x, y):
+        super().__init__()
+        self.frames = frames
+        self.current_frame = 0
+        self.image = self.frames[self.current_frame]
+        self.rect = self.image.get_rect(center=(x, y))
+        self.animation_speed = 0.1  # Adjust the speed of the animation
+        self.last_update = pygame.time.get_ticks()
+
+    def update(self):
+        now = pygame.time.get_ticks()
+        if now - self.last_update > 100:  # Adjust the frame rate of the animation
+            self.last_update = now
+            self.current_frame = (self.current_frame + 1) % len(self.frames)
+            self.image = self.frames[self.current_frame]
+
+# Create an instance of the animated sprite
+pet_sprite = AnimatedSprite(pet_frames, screen_width // 2, screen_height // 2)
+all_sprites = pygame.sprite.Group(pet_sprite)
+
 # Need to import sprites for the food, water, play, and sleep features
 
 # Create a surface for the food
@@ -91,10 +124,11 @@ while running:
         y_position = screen_height // 8 - surface.get_height() // 2  # Position closer to the top
         screen.blit(surface, (x_position, y_position))
 
-    # Place the pet in the center of the screen
-    x_position = screen_width // 2 - pet_surface.get_width() // 2
-    y_position = screen_height // 2 - pet_surface.get_height() // 2
-    screen.blit(pet_surface, (x_position, y_position)) # Place the pet on the screen
+    # Update and draw all sprites
+    all_sprites.update()
+    all_sprites.draw(screen)
+
+    # The pet_surface is not needed anymore as we have the animated sprite
 
     # Place the buttons at the bottom of the screen
     left_button_x = screen_width // 4 - left_button_surface.get_width() // 2
