@@ -387,8 +387,8 @@ class Button:
         return False
 
 # Create buttons for Menu screen
-play_button = Button(screen_width//2 - 100, screen_height//2, 200, 50, "Play", (0, 150, 0), (0, 200, 0))
-quit_button = Button(screen_width//2 - 100, screen_height//2 + 70, 200, 50, "Quit", (150, 0, 0), (200, 0, 0))
+play_button = Button(screen_width//2 - 100, screen_height//2 + 100, 200, 50, "Play", (0, 150, 0), (0, 200, 0))
+quit_button = Button(screen_width//2 - 100, screen_height//2 + 170, 200, 50, "Quit", (150, 0, 0), (200, 0, 0))
 
 # Create buttons for Game Over screen
 retry_button = Button(screen_width//2 - 100, screen_height//2, 200, 50, "Retry", (0, 150, 0), (0, 200, 0))
@@ -462,6 +462,38 @@ def reset_game():
 # Create a surface for the pet and scale it to a larger size
 petEgg_surface = pygame.image.load('graphics/komodoEgg.png').convert_alpha()
 petEgg_surface = pygame.transform.scale(petEgg_surface, (250, 250))  # Scale to 250x250 pixels
+
+# Add logo image for menu screen - with aspect ratio preservation
+try:
+    # Load the logo image
+    original_logo = pygame.image.load('graphics/startPageLogo.png').convert_alpha()
+    
+    # Get original dimensions
+    orig_width, orig_height = original_logo.get_size()
+    
+    # Calculate new width based on desired height while preserving aspect ratio
+    target_height = 200  # Increased from 150 to 200 for an even bigger logo
+    aspect_ratio = orig_width / orig_height
+    target_width = int(target_height * aspect_ratio)
+    
+    # Scale to new dimensions that preserve aspect ratio
+    logo_image = pygame.transform.scale(original_logo, (target_width, target_height))
+    print(f"Logo loaded and scaled from {orig_width}x{orig_height} to {target_width}x{target_height}")
+except Exception as e:
+    # Create a fallback logo if image loading fails
+    print(f"Error loading logo: {e}")
+    # Adjust fallback logo size to match new dimensions
+    logo_image = pygame.Surface((600, 200), pygame.SRCALPHA)  # Increased size for bigger logo
+    # Draw a simple text-based logo
+    logo_font = pygame.font.Font(None, 100)  # Increased font size to match larger logo
+    logo_text = logo_font.render("REPTILE SIM", True, (50, 220, 50))
+    logo_shadow = logo_font.render("REPTILE SIM", True, (20, 100, 20))
+    logo_image.blit(logo_shadow, (7, 7))  # Shadow effect
+    logo_image.blit(logo_text, (5, 5))     # Main text
+    
+    # Add a simple graphical element
+    pygame.draw.rect(logo_image, (30, 150, 30), (20, 80, 260, 30), border_radius=15)
+    pygame.draw.rect(logo_image, (60, 200, 60), (20, 80, 260, 30), 3, border_radius=15)
 
 # Variables for drag and drop functionality
 dragging_fly = None
@@ -657,22 +689,38 @@ while running:
         overlay.fill((0, 0, 0, 128))  # Semi-transparent black
         screen.blit(overlay, (0, 0))
         
-        # Draw title
-        smaller_title_font = pygame.font.Font(None, 48)  # Smaller than the original 64
-        title_text = smaller_title_font.render("Reptile Pet Simulator", True, (255, 255, 255))
-        title_rect = title_text.get_rect(center=(screen_width // 2, screen_height // 4))
+        # Option A: Draw title with adjusted font size to ensure it fits
+        menu_title_font = pygame.font.Font(None, 54)  # Reduced from 72 to 54 to ensure it fits
+        title_text = menu_title_font.render("Reptile Pet Simulator", True, (255, 255, 255))
+        # Verify if title fits within screen width
+        if title_text.get_width() > screen_width - 20:  # Leave 10px margin on each side
+            # If still too big, reduce further
+            menu_title_font = pygame.font.Font(None, 46)
+            title_text = menu_title_font.render("Reptile Pet Simulator", True, (255, 255, 255))
+            
+        title_rect = title_text.get_rect(center=(screen_width // 2, screen_height // 8))
         screen.blit(title_text, title_rect)
         
-        # Draw pet egg for decoration
-        menu_pet = pygame.transform.scale(petEgg_surface, (150, 150))
-        screen.blit(menu_pet, menu_pet.get_rect(center=(screen_width // 2, screen_height // 3 + 50)))
+        # Alternative Option B (commented out):
+        # Use two lines for title to fit better (uncomment if preferred)
+        # menu_title_font = pygame.font.Font(None, 60)  # Can be larger for two lines
+        # title_text1 = menu_title_font.render("Reptile Pet", True, (255, 255, 255))
+        # title_text2 = menu_title_font.render("Simulator", True, (255, 255, 255))
+        # title_rect1 = title_text1.get_rect(center=(screen_width // 2, screen_height // 10))
+        # title_rect2 = title_text2.get_rect(center=(screen_width // 2, screen_height // 10 + 50))
+        # screen.blit(title_text1, title_rect1)
+        # screen.blit(title_text2, title_rect2)
         
-        # Add game description
+        # Draw logo below the title
+        logo_rect = logo_image.get_rect(center=(screen_width // 2, screen_height // 4 + 30))
+        screen.blit(logo_image, logo_rect)
+        
+        # Add game description (adjusted position for new layout)
         desc_text = test_font.render("Take care of your reptile pet and watch it grow!", True, (255, 255, 255))
-        desc_rect = desc_text.get_rect(center=(screen_width // 2, screen_height // 2 - 105))
+        desc_rect = desc_text.get_rect(center=(screen_width // 2, screen_height // 2 - 25))
         screen.blit(desc_text, desc_rect)
         
-        # Draw buttons
+        # Draw buttons (keep at the same position)
         play_button.draw(screen)
         quit_button.draw(screen)
     
