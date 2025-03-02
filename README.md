@@ -1,4 +1,4 @@
-# 🦎 Reptile Simulator
+# 🦎 Komodojo - Take care of your reptile friend and watch it grow! 
 
 A Tamagotchi-style virtual pet simulator focused on reptiles, built with Pygame. Adopt, raise, and care for your digital reptile companions!
 
@@ -15,8 +15,8 @@ A Tamagotchi-style virtual pet simulator focused on reptiles, built with Pygame.
 
 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/reptile-simulator.git
-cd reptile-simulator
+git clone https://github.com/vdragaon1225/komodojo
+cd komodojo
 ```
 
 2. Install required packages
