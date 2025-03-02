@@ -89,7 +89,12 @@ def main():
         
         # Draw game elements based on game state
         if game.game_state == MENU:
-            draw_menu(screen, logo_image, play_button, quit_button)
+            # Update menu background scroll
+            game.update_background_scroll()
+            # Draw menu with scrolling background
+            draw_menu(screen, logo_image, play_button, quit_button, 
+                     background_image=game.background_image, 
+                     background_scroll=game.background_scroll)
             
         elif game.game_state == PLAYING:
             # Draw game background and sprites

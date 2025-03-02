@@ -31,15 +31,21 @@ def create_menu_buttons():
 
 # Create and return game over buttons
 def create_game_over_buttons():
-    retry_button = Button(SCREEN_WIDTH//2 - 100, SCREEN_HEIGHT//2, 200, 50, "Retry", (0, 150, 0), (0, 200, 0))
-    exit_button = Button(SCREEN_WIDTH//2 - 100, SCREEN_HEIGHT//2 + 70, 200, 50, "Exit", (150, 0, 0), (200, 0, 0))
+    retry_button = Button(SCREEN_WIDTH//2 - 100, SCREEN_HEIGHT//2 + 100, 200, 50, "Retry", (0, 150, 0), (0, 200, 0))
+    exit_button = Button(SCREEN_WIDTH//2 - 100, SCREEN_HEIGHT//2 + 170, 200, 50, "Exit", (150, 0, 0), (200, 0, 0))
     return retry_button, exit_button
 
 # Draw the menu screen
-def draw_menu(screen, logo_image, play_button, quit_button):
-    # Draw a semi-transparent overlay to make text more readable
+def draw_menu(screen, logo_image, play_button, quit_button, background_image=None, background_scroll=0):
+    # Draw scrolling background if available
+    if background_image:
+        # Draw background with scrolling (draw two copies for seamless scrolling)
+        screen.blit(background_image, (background_scroll, 0))
+        screen.blit(background_image, (background_scroll + SCREEN_WIDTH, 0))
+    
+    # Draw a semi-transparent overlay with slightly less opacity
     overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
-    overlay.fill((0, 0, 0, 128))  # Semi-transparent black
+    overlay.fill((0, 0, 0, 100))  # Reduced from 128 to 100 for better visibility
     screen.blit(overlay, (0, 0))
     
     # Draw title with adjusted font size to ensure it fits
@@ -81,6 +87,10 @@ def draw_game_over(screen, pet_age, retry_button, exit_button):
     final_age_text = test_font.render(f"Your pet lived to {pet_age} years old", True, (255, 255, 255))
     final_age_rect = final_age_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 3))
     screen.blit(final_age_text, final_age_rect)
+    
+    # Adjust button positions to be lower
+    retry_button.rect.topleft = (SCREEN_WIDTH // 2 - 100, final_age_rect.bottom + 40)
+    exit_button.rect.topleft = (SCREEN_WIDTH // 2 - 100, retry_button.rect.bottom + 20)
     
     # Draw buttons
     retry_button.draw(screen)

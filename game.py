@@ -178,9 +178,7 @@ class Game:
         now = pygame.time.get_ticks()
         
         # Update background scroll
-        self.background_scroll -= self.background_scroll_speed
-        if self.background_scroll <= -SCREEN_WIDTH:
-            self.background_scroll = 0
+        self.update_background_scroll()
             
         # Only update game logic if in PLAYING state
         if self.game_state == PLAYING:
@@ -322,3 +320,10 @@ class Game:
         # Update dragged fly position
         if self.dragging_fly:
             self.dragging_fly.update_drag_position(mouse_pos)
+            
+    def update_background_scroll(self):
+        # Update background position for scrolling effect regardless of game state
+        self.background_scroll -= self.background_scroll_speed
+        # Reset when the first background has completely scrolled off-screen
+        if self.background_scroll <= -SCREEN_WIDTH:
+            self.background_scroll = 0
