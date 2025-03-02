@@ -30,6 +30,10 @@ FLY_BOUNDARY_TOP = screen_height // 6 + 30  # Updated: Increased to keep flies a
 background_image = pygame.image.load('graphics/background.png').convert()
 background_image = pygame.transform.scale(background_image, (screen_width, screen_height))
 
+# Add these variables after loading the background image
+background_scroll = 0
+background_scroll_speed = 1  # Pixels per frame - adjust for faster/slower scrolling
+
 # Initialize the age of the pet
 pet_age = 0
 last_age_update = pygame.time.get_ticks()
@@ -427,7 +431,8 @@ box_y = screen_height // 8 - box_size // 2  # Position closer to the top
 
 # Function to reset the game
 def reset_game():
-    global pet_age, pet_hunger, game_state, last_age_update, last_hunger_update, egg_sprite, all_sprites
+    global pet_age, pet_hunger, game_state, last_age_update, last_hunger_update, egg_sprite, all_sprites, previous_pet_age
+    previous_pet_age = 0
     pet_age = 0
     pet_hunger = 100
     game_state = PLAYING
@@ -450,6 +455,9 @@ def reset_game():
     max_flies = get_max_flies(pet_age)
     for _ in range(max_flies):
         create_fly()
+    
+    # Clear any existing explosions
+    explosion_sprites.empty()
 
 # Create a surface for the pet and scale it to a larger size
 petEgg_surface = pygame.image.load('graphics/komodoEgg.png').convert_alpha()
@@ -472,6 +480,62 @@ def get_hunger_interval(age):
 print("Creating initial egg sprite")
 egg_sprite = EggSprite(egg_frames, screen_width // 2, screen_height // 2 + 100)
 all_sprites.add(egg_sprite)
+
+# Add code for explosion animation after the other sprite classes
+class ExplosionSprite(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        # Generate explosion animation frames programmatically
+        self.frames = []
+        
+        # Create 8 frames of explosion
+        colors = [(255, 255, 0), (255, 165, 0), (255, 69, 0), (255, 0, 0)]  # Yellow, orange, dark orange, red
+        for i in range(8):
+            # Size increases then decreases
+            size = 100 if i < 4 else 100 - (i - 3) * 20
+            
+            frame = pygame.Surface((size, size), pygame.SRCALPHA)
+            
+            # Draw explosion parts (particles)
+            num_particles = 16
+            color = colors[min(i // 2, len(colors) - 1)]
+            
+            for p in range(num_particles):
+                angle = p * (2 * math.pi / num_particles)
+                dist = size // 2 - 5 - random.randint(0, 10)
+                pos_x = size // 2 + int(dist * math.cos(angle))
+                pos_y = size // 2 + int(dist * math.sin(angle))
+                radius = max(2, (8 - i) * 2) + random.randint(-2, 2)
+                pygame.draw.circle(frame, color, (pos_x, pos_y), radius)
+            
+            # Add white center
+            center_size = max(5, 25 - i * 3)
+            pygame.draw.circle(frame, (255, 255, 255), (size // 2, size // 2), center_size)
+            
+            self.frames.append(frame)
+        
+        self.current_frame = 0
+        self.image = self.frames[self.current_frame]
+        self.rect = self.image.get_rect(center=(x, y))
+        self.animation_speed = 100  # ms per frame
+        self.last_update = pygame.time.get_ticks()
+    
+    def update(self):
+        now = pygame.time.get_ticks()
+        if now - self.last_update > self.animation_speed:
+            self.last_update = now
+            self.current_frame += 1
+            if self.current_frame >= len(self.frames):
+                self.kill()  # Remove explosion when animation is complete
+            else:
+                self.image = self.frames[self.current_frame]
+                self.rect = self.image.get_rect(center=self.rect.center)
+
+# Create a group for explosions
+explosion_sprites = pygame.sprite.Group()
+
+# Track the previous age to detect transitions
+previous_pet_age = 0
 
 # Main game loop
 running = True
@@ -574,8 +638,15 @@ while running:
     # Clear the screen
     screen.fill((0, 0, 0))
     
-    # Draw background
-    screen.blit(background_image, (0, 0))
+    # Update background position for scrolling effect
+    background_scroll -= background_scroll_speed
+    # Reset when the first background has completely scrolled off-screen
+    if background_scroll <= -screen_width:
+        background_scroll = 0
+        
+    # Draw background with scrolling (draw two copies for seamless scrolling)
+    screen.blit(background_image, (background_scroll, 0))
+    screen.blit(background_image, (background_scroll + screen_width, 0))
     
     # Menu state
     if game_state == MENU:
@@ -610,6 +681,9 @@ while running:
         # Update the age of the pet every 3 seconds (3000 milliseconds)
         now = pygame.time.get_ticks()
         
+        # Store the previous age to detect transitions
+        previous_pet_age = pet_age
+        
         # Check if egg has just hatched - trigger immediate transition
         if pet_age == 0 and egg_sprite.animation_completed:
             if egg_sprite.just_hatched or now - last_age_update >= 1500:  # If just hatched or waited enough time
@@ -617,11 +691,26 @@ while running:
                 pet_age = 1
                 last_age_update = now
                 print(f"Egg hatched! Pet age advanced to {pet_age} years")
+                # Create an explosion effect at the egg position
+                explosion = ExplosionSprite(screen_width // 2, screen_height // 2 + 100)
+                explosion_sprites.add(explosion)
         # Regular age updates for older pets
         elif now - last_age_update >= 3000:
             pet_age += 1
             last_age_update = now
             print(f"Pet age: {pet_age} years")
+            
+            # Check for transitions and create explosions
+            if previous_pet_age < 10 and pet_age >= 10:
+                # Transition from baby to teenage
+                print("Transforming from baby to teenage komodo!")
+                explosion = ExplosionSprite(screen_width // 2, screen_height // 2 + 100)
+                explosion_sprites.add(explosion)
+            elif previous_pet_age < 20 and pet_age >= 20:
+                # Transition from teenage to old
+                print("Transforming from teenage to old komodo!")
+                explosion = ExplosionSprite(screen_width // 2, screen_height // 2 + 100)
+                explosion_sprites.add(explosion)
         
         # Update the hunger level - only when the egg has hatched
         hunger_interval = get_hunger_interval(pet_age)
@@ -677,6 +766,10 @@ while running:
         # Update and draw flies
         fly_sprites.update()
         fly_sprites.draw(screen)
+        
+        # Update and draw explosions
+        explosion_sprites.update()
+        explosion_sprites.draw(screen)
     
     # Game over state
     elif game_state == GAME_OVER:
