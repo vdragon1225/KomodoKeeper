@@ -131,16 +131,7 @@ def load_and_scale_logo(path):
         pygame.draw.rect(logo_image, (30, 150, 30), (20, 80, 260, 30), border_radius=15)
         pygame.draw.rect(logo_image, (60, 200, 60), (20, 80, 260, 30), 3, border_radius=15)
         return logo_image
-
-# Function to generate box rectangles for UI
-def generate_box_rects():
-    box_rects = []
-    for i in range(4):
-        x_position = BOX_SPACING * (i + 1) - BOX_SIZE // 2
-        box_rect = pygame.Rect(x_position, BOX_Y, BOX_SIZE, BOX_SIZE)
-        box_rects.append(box_rect)
-    return box_rects
-
+    
 #----------------------------------------------------------------------
 # ASSET LOADER CLASS
 #----------------------------------------------------------------------
@@ -760,20 +751,21 @@ def draw_game_over(screen, pet_age, retry_button, exit_button):
     exit_button.draw(screen)
 
 # Draw the playing screen UI elements
-def draw_playing_ui(screen, pet_age, pet_hunger, box_rects):
+def draw_playing_ui(screen, pet_age, pet_hunger):
     # Render the age and hunger text
     test_font = pygame.font.Font(None, 24)
     age_text = test_font.render(f"Pet age: {pet_age} years", True, (255, 255, 255))
     hunger_text = test_font.render(f"Pet hunger: {pet_hunger}%", True, (255, 255, 255))
     screen.blit(age_text, (10, 10))
-    screen.blit(hunger_text, (10, 40))
-    
-    # Draw the status boxes
-    for i, rect in enumerate(box_rects):
-        color = ['Red', 'Blue', 'Green', 'Purple'][i % 4]  # Get color from list
-        pygame.draw.rect(screen, color, rect)
-        pygame.draw.rect(screen, 'White', rect, 2)  # White border for visibility
+    # Get the width of the hunger text surface itself
+    hunger_text_width = hunger_text.get_width()
 
+    # Calculate position (screen width - text width - margin)
+    hunger_text_x = screen.get_width() - hunger_text_width - 10
+
+    # Display the text
+    screen.blit(hunger_text, (hunger_text_x, 10))
+    
 #----------------------------------------------------------------------
 # GAME CLASS
 #----------------------------------------------------------------------
@@ -803,9 +795,6 @@ class Game:
         
         # Drag and drop
         self.dragging_fly = None
-        
-        # UI elements
-        self.box_rects = generate_box_rects()
         
         # Game over state
         self.game_over_time = 0
@@ -1164,7 +1153,6 @@ def main():
     # Create UI elements
     play_button, quit_button = create_menu_buttons()
     retry_button, exit_button = create_game_over_buttons()
-    box_rects = generate_box_rects()
     
     # Load logo
     logo_image = load_and_scale_logo('graphics/startPageLogo.png')
@@ -1245,7 +1233,7 @@ def main():
             game.draw(screen)
             
             # Draw game UI
-            draw_playing_ui(screen, game.pet_age, game.pet_hunger, box_rects)
+            draw_playing_ui(screen, game.pet_age, game.pet_hunger)
             
         elif game.game_state == GAME_OVER:
             # Draw game background
