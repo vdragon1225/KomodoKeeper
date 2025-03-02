@@ -1131,11 +1131,27 @@ class Game:
             self.dragging_fly.update_drag_position(mouse_pos)
             
     def update_background_scroll(self):
-        # Update background position for scrolling effect regardless of game state
-        self.background_scroll -= self.background_scroll_speed
-        # Reset when the first background has completely scrolled off-screen
-        if self.background_scroll <= -SCREEN_WIDTH:
-            self.background_scroll = 0
+        # Check if we should scroll the background
+        should_scroll = True
+        
+        # Don't scroll in menu state
+        if self.game_state == MENU:
+            should_scroll = False
+        
+        # Don't scroll when showing an egg (pet_age < 1)
+        if self.game_state == PLAYING and self.pet_age < 1:
+            should_scroll = False
+        
+        # Don't scroll when showing the tombstone (game over state)
+        if self.game_state == GAME_OVER and self.tombstone_sprite is not None:
+            should_scroll = False
+        
+        # Update background position for scrolling effect if needed
+        if should_scroll:
+            self.background_scroll -= self.background_scroll_speed
+            # Reset when the first background has completely scrolled off-screen
+            if self.background_scroll <= -SCREEN_WIDTH:
+                self.background_scroll = 0
 
 #----------------------------------------------------------------------
 # MAIN GAME LOOP
@@ -1217,7 +1233,7 @@ def main():
         screen.fill((0, 0, 0))
         
         # Update game logic
-        game.update()
+        game.update()  # (don't update scroll here)
         
         # Draw game elements based on game state
         if game.game_state == MENU:
@@ -1227,14 +1243,12 @@ def main():
             draw_menu(screen, logo_image, play_button, quit_button, 
                      background_image=game.background_image, 
                      background_scroll=game.background_scroll)
-            
         elif game.game_state == PLAYING:
             # Draw game background and sprites
             game.draw(screen)
             
             # Draw game UI
             draw_playing_ui(screen, game.pet_age, game.pet_hunger)
-            
         elif game.game_state == GAME_OVER:
             # Draw game background
             game.draw(screen)
