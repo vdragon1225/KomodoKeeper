@@ -122,6 +122,13 @@ old_komodo_eating_frames = [
     pygame.image.load('graphics/oldKomodoEating2.png').convert_alpha()
 ]
 
+# Load animation frames for egg cracking
+egg_frames = [
+    pygame.image.load('graphics/komodoEgg1.png').convert_alpha(),
+    pygame.image.load('graphics/komodoEgg2.png').convert_alpha(),
+    pygame.image.load('graphics/komodoEgg3.png').convert_alpha()
+]
+
 # Scale frames to the desired size
 pet_frames = [pygame.transform.scale(frame, (250, 250)) for frame in teenage_frames]
 baby_komodo_frames = [pygame.transform.scale(frame, (250, 250)) for frame in baby_komodo_frames]
@@ -129,6 +136,7 @@ old_komodo_frames = [pygame.transform.scale(frame, (250, 250)) for frame in old_
 komodo_eating_frames = [pygame.transform.scale(frame, (250, 250)) for frame in komodo_eating_frames]
 baby_komodo_eating_frames = [pygame.transform.scale(frame, (250, 250)) for frame in baby_komodo_eating_frames]
 old_komodo_eating_frames = [pygame.transform.scale(frame, (250, 250)) for frame in old_komodo_eating_frames]
+egg_frames = [pygame.transform.scale(frame, (250, 250)) for frame in egg_frames]
 
 # Create an animated sprite
 class AnimatedSprite(pygame.sprite.Sprite):
@@ -175,6 +183,81 @@ class AnimatedSprite(pygame.sprite.Sprite):
         self.current_frame = 0
         # Ensure we immediately show the first eating frame
         self.image = self.eating_frames[0]
+
+# Create a specialized egg sprite that runs slowly and only once
+class EggSprite(AnimatedSprite):
+    def __init__(self, frames, x, y):
+        super().__init__(frames, x, y)
+        # Initialize with first frame
+        self.current_frame = 0
+        self.image = self.frames[self.current_frame]
+        self.animation_completed = False
+        self.animation_started = False
+        self.frame_delay = 1500  # Increased to 1.5 seconds between frames
+        self.start_delay = 2000  # 2 seconds before animation starts
+        self.start_time = pygame.time.get_ticks()
+        self.last_update = pygame.time.get_ticks()
+        # Add shake effect for cracking animation
+        self.shake_amount = 0
+        self.original_pos = (x, y)
+        # New flag to track when the egg has just cracked
+        self.just_cracked = False
+        print("New egg sprite created, showing frame 0")
+    
+    def update(self):
+        # Reset the just_cracked flag at the beginning of each update
+        self.just_cracked = False
+        
+        # Don't use parent update method to have complete control
+        now = pygame.time.get_ticks()
+        
+        # Don't animate if completed
+        if self.animation_completed:
+            return
+            
+        # Wait for start delay before beginning animation
+        if not self.animation_started:
+            if now - self.start_time > self.start_delay:
+                self.animation_started = True
+                self.last_update = now
+                self.shake_amount = 3  # Start shaking when animation begins
+                print("Egg animation starting")
+            return
+        
+        # Once animation has started, advance frames with the specified delay
+        if now - self.last_update > self.frame_delay:
+            # Move to next frame
+            self.current_frame += 1
+            self.last_update = now
+            
+            # Add shake effect when changing frames
+            self.shake_amount = 5
+            
+            # Check if we've reached the end
+            if self.current_frame >= len(self.frames):
+                self.current_frame = len(self.frames) - 1  # Stay on last frame
+                if not self.animation_completed:  # Only set just_cracked if this is the first time
+                    self.just_cracked = True
+                    print("Egg just cracked!")
+                self.animation_completed = True
+                self.shake_amount = 0  # Stop shaking at the end
+                print(f"Egg animation complete, staying on frame {self.current_frame}")
+            else:
+                print(f"Egg animation showing frame {self.current_frame}")
+                
+            # Update the visible image
+            self.image = self.frames[self.current_frame]
+        
+        # Apply shake effect if active
+        if self.shake_amount > 0:
+            # Random offset for shaking effect
+            shake_offset_x = random.randint(-self.shake_amount, self.shake_amount)
+            shake_offset_y = random.randint(-self.shake_amount, self.shake_amount)
+            self.rect.center = (self.original_pos[0] + shake_offset_x, 
+                               self.original_pos[1] + shake_offset_y)
+            # Gradually reduce shake amount
+            if random.random() > 0.9:  # 10% chance each frame
+                self.shake_amount = max(0, self.shake_amount - 1)
 
 # Function to calculate fly speed based on pet's age
 def get_fly_speed(age):
@@ -290,6 +373,9 @@ baby_komodo_sprite.eating_frames = baby_komodo_eating_frames  # Changed to use b
 old_komodo_sprite = AnimatedSprite(old_komodo_frames, screen_width // 2, screen_height // 2 + 100)
 old_komodo_sprite.eating_frames = old_komodo_eating_frames  # Changed to use old-specific eating frames
 
+# Create an animated sprite for the egg - use EggSprite instead of AnimatedSprite
+egg_sprite = EggSprite(egg_frames, screen_width // 2, screen_height // 2 + 100)
+
 # Create fly sprites
 fly_sprites = pygame.sprite.Group()
 
@@ -317,12 +403,17 @@ box_y = screen_height // 8 - box_size // 2  # Position closer to the top
 
 # Function to reset the game
 def reset_game():
-    global pet_age, pet_hunger, game_state, last_age_update, last_hunger_update
+    global pet_age, pet_hunger, game_state, last_age_update, last_hunger_update, egg_sprite
     pet_age = 0
     pet_hunger = 100
     game_state = PLAYING
-    last_age_update = pygame.time.get_ticks()
+    
+    # Delay the first age increment to allow time for egg animation
+    last_age_update = pygame.time.get_ticks() + 5000  # Add 5 seconds before first age increment
     last_hunger_update = pygame.time.get_ticks()
+    
+    # Create a new egg sprite instead of trying to reset the existing one
+    egg_sprite = EggSprite(egg_frames, screen_width // 2, screen_height // 2 + 100)
     
     # Clear and create flies based on the initial maximum number of flies
     fly_sprites.empty()
@@ -330,9 +421,8 @@ def reset_game():
     for _ in range(max_flies):
         create_fly()
 
-# Create a surface for the pet and scale it to a larger size
-petEgg_surface = pygame.image.load('graphics/komodoEgg.png').convert_alpha()
-petEgg_surface = pygame.transform.scale(petEgg_surface, (250, 250))  # Scale to 250x250 pixels
+# Use the first frame of the egg animation for static references
+petEgg_surface = egg_frames[0]  # First frame of egg animation
 
 # Variables for drag and drop functionality
 dragging_fly = None
@@ -498,13 +588,20 @@ while running:
         # Update the age of the pet every 3 seconds (3000 milliseconds)
         now = pygame.time.get_ticks()
         if now - last_age_update >= 3000:
+            # Store old age to detect transition
+            old_age = pet_age
             pet_age += 1
             last_age_update = now
             print(f"Pet age: {pet_age} years")
+            
+            # Check if this is the moment the baby komodo appears (egg hatches)
+            if old_age == 0 and pet_age == 1:
+                pet_hunger = 100
+                print("Baby Komodo hatched! Hunger reset to 100%")
         
-        # Update the hunger level
+        # Update the hunger level - only if the pet has hatched (pet_age >= 1)
         hunger_interval = get_hunger_interval(pet_age)
-        if now - last_hunger_update >= hunger_interval:
+        if pet_age >= 1 and now - last_hunger_update >= hunger_interval:
             pet_hunger = max(0, pet_hunger - 10)
             last_hunger_update = now
             print(f"Pet hunger: {pet_hunger}%")
@@ -512,6 +609,9 @@ while running:
             # Check if pet has starved
             if pet_hunger <= 0:
                 game_state = GAME_OVER
+        elif pet_age < 1:
+            # While egg is still cracking, maintain hunger at 100%
+            pet_hunger = 100
         
         # Render the age and hunger text
         age_text = test_font.render(f"Pet age: {pet_age} years", True, (255, 255, 255))
@@ -532,7 +632,8 @@ while running:
         all_sprites.empty()
         
         if pet_age < 1:
-            screen.blit(petEgg_surface, petEgg_surface.get_rect(center=(screen_width // 2, screen_height // 2 + 100)))
+            # Replace static egg with animated egg sprite
+            all_sprites.add(egg_sprite)
         elif pet_age < 10:
             all_sprites.add(baby_komodo_sprite)
         elif pet_age < 20:
@@ -543,7 +644,8 @@ while running:
         # Debug: Show which sprite is active and if it's eating
         active_sprite = None
         if pet_age < 1:
-            print("Showing egg")
+            print("Showing animated egg")
+            active_sprite = egg_sprite
         elif pet_age < 10:
             active_sprite = baby_komodo_sprite
         elif pet_age < 20:
@@ -557,6 +659,12 @@ while running:
         
         # Update and draw all sprites - make sure this is called for animation to work
         all_sprites.update()
+        
+        # Check if the egg just cracked and reset hunger
+        if pet_age < 1 and isinstance(active_sprite, EggSprite) and active_sprite.just_cracked:
+            pet_hunger = 100
+            print("Egg cracked! Hunger reset to 100%")
+        
         all_sprites.draw(screen)
         
         # Update and draw flies
