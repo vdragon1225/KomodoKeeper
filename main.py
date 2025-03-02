@@ -122,16 +122,38 @@ old_komodo_eating_frames = [
     pygame.image.load('graphics/oldKomodoEating2.png').convert_alpha()
 ]
 
-<<<<<<< Updated upstream
-=======
-# Load animation frames for egg cracking
-egg_frames = [
-    pygame.image.load('graphics/egg/komodoEgg1.png').convert_alpha(),
-    pygame.image.load('graphics/egg/komodoEgg2.png').convert_alpha(),
-    pygame.image.load('graphics/egg/komodoEgg3.png').convert_alpha()
-]
+# Load animation frames for egg cracking - add verification
+try:
+    egg_frames = [
+        pygame.image.load('graphics/egg/komodoEgg1.png').convert_alpha(),
+        pygame.image.load('graphics/egg/komodoEgg2.png').convert_alpha(),
+        pygame.image.load('graphics/egg/komodoEgg3.png').convert_alpha()
+    ]
+    print("Egg frames loaded successfully:")
+    for i, frame in enumerate(egg_frames):
+        print(f"Frame {i}: size={frame.get_size()}")
+    
+    # Scale frames to the desired size
+    egg_frames = [pygame.transform.scale(frame, (250, 250)) for frame in egg_frames]
+except Exception as e:
+    print(f"Error loading egg frames: {e}")
+    # Create placeholder egg frames if loading fails
+    egg_frames = []
+    base_egg = pygame.Surface((250, 250), pygame.SRCALPHA)
+    pygame.draw.ellipse(base_egg, (255, 255, 200), (50, 50, 150, 200))  # Base egg shape
+    
+    egg_frames.append(base_egg.copy())  # Frame 1: intact egg
+    
+    crack_egg = base_egg.copy()
+    pygame.draw.line(crack_egg, (0, 0, 0), (100, 100), (150, 150), 3)  # Frame 2: egg with crack
+    egg_frames.append(crack_egg)
+    
+    hatching_egg = base_egg.copy()
+    pygame.draw.polygon(hatching_egg, (0, 0, 0), [(80, 80), (120, 70), (160, 90), (170, 130)], 3)  # Frame 3: egg hatching
+    egg_frames.append(hatching_egg)
+    
+    print("Created placeholder egg frames")
 
->>>>>>> Stashed changes
 # Scale frames to the desired size
 pet_frames = [pygame.transform.scale(frame, (250, 250)) for frame in teenage_frames]
 baby_komodo_frames = [pygame.transform.scale(frame, (250, 250)) for frame in baby_komodo_frames]
@@ -139,6 +161,7 @@ old_komodo_frames = [pygame.transform.scale(frame, (250, 250)) for frame in old_
 komodo_eating_frames = [pygame.transform.scale(frame, (250, 250)) for frame in komodo_eating_frames]
 baby_komodo_eating_frames = [pygame.transform.scale(frame, (250, 250)) for frame in baby_komodo_eating_frames]
 old_komodo_eating_frames = [pygame.transform.scale(frame, (250, 250)) for frame in old_komodo_eating_frames]
+egg_frames = [pygame.transform.scale(frame, (250, 250)) for frame in egg_frames]
 
 # Create an animated sprite
 class AnimatedSprite(pygame.sprite.Sprite):
@@ -185,6 +208,77 @@ class AnimatedSprite(pygame.sprite.Sprite):
         self.current_frame = 0
         # Ensure we immediately show the first eating frame
         self.image = self.eating_frames[0]
+
+# Create a specialized egg sprite that runs slowly and only once
+class EggSprite(pygame.sprite.Sprite):
+    def __init__(self, frames, x, y):
+        super().__init__()
+        # Verify we have frames
+        if not frames:
+            raise ValueError("No egg frames provided")
+        
+        self.frames = frames
+        print(f"EggSprite initialized with {len(self.frames)} frames")
+        
+        # Set initial state
+        self.current_frame = 0
+        self.image = self.frames[self.current_frame]
+        self.rect = self.image.get_rect(center=(x, y))
+        self.animation_completed = False
+        self.animation_started = False
+        self.frame_delay = 2000  # 2 seconds between frames
+        self.start_delay = 3000  # 3 seconds before animation starts
+        self.last_update = pygame.time.get_ticks()
+        self.start_time = pygame.time.get_ticks()
+        
+        # Shake effect
+        self.shake_amount = 0
+        self.original_pos = (x, y)
+        print(f"New egg sprite created at position {(x, y)}")
+    
+    def update(self):
+        now = pygame.time.get_ticks()
+        
+        # Don't update if animation is completed
+        if self.animation_completed:
+            return
+        
+        # Wait for start delay before beginning animation
+        if not self.animation_started:
+            if now - self.start_time > self.start_delay:
+                self.animation_started = True
+                self.last_update = now
+                self.shake_amount = 3
+                print("Egg animation starting now!")
+            return
+        
+        # Update frame if enough time has passed
+        if now - self.last_update > self.frame_delay:
+            self.current_frame += 1
+            print(f"Advancing to egg frame {self.current_frame}")
+            
+            # Add shake effect when changing frames
+            self.shake_amount = 5
+            
+            # Check if we've reached the end
+            if self.current_frame >= len(self.frames):
+                self.current_frame = len(self.frames) - 1
+                self.animation_completed = True
+                print(f"Egg animation complete! Staying on final frame")
+            
+            # Update the image and timestamp
+            self.image = self.frames[self.current_frame]
+            self.last_update = now
+        
+        # Apply shake effect
+        if self.shake_amount > 0:
+            shake_x = random.randint(-self.shake_amount, self.shake_amount)
+            shake_y = random.randint(-self.shake_amount, self.shake_amount)
+            self.rect.center = (self.original_pos[0] + shake_x, self.original_pos[1] + shake_y)
+            
+            # Gradually reduce shake
+            if random.random() > 0.8:  # 20% chance each frame to reduce shake
+                self.shake_amount = max(0, self.shake_amount - 1)
 
 # Function to calculate fly speed based on pet's age
 def get_fly_speed(age):
@@ -327,14 +421,25 @@ box_y = screen_height // 8 - box_size // 2  # Position closer to the top
 
 # Function to reset the game
 def reset_game():
-    global pet_age, pet_hunger, game_state, last_age_update, last_hunger_update
+    global pet_age, pet_hunger, game_state, last_age_update, last_hunger_update, egg_sprite, all_sprites
     pet_age = 0
     pet_hunger = 100
     game_state = PLAYING
-    last_age_update = pygame.time.get_ticks()
-    last_hunger_update = pygame.time.get_ticks()
     
-    # Clear and create flies based on the initial maximum number of flies
+    # Set up the time values for age/hunger updates
+    current_time = pygame.time.get_ticks()
+    last_age_update = current_time + 5000  # 5 second delay before first age increment
+    last_hunger_update = current_time
+    
+    # Create a new egg sprite
+    print("Creating new egg sprite during game reset")
+    egg_sprite = EggSprite(egg_frames, screen_width // 2, screen_height // 2 + 100)
+    
+    # Clear all sprites and add the new egg sprite
+    all_sprites.empty()
+    all_sprites.add(egg_sprite)
+    
+    # Create initial flies
     fly_sprites.empty()
     max_flies = get_max_flies(pet_age)
     for _ in range(max_flies):
@@ -355,6 +460,12 @@ def get_hunger_interval(age):
         return 1000  # 1 second for teenager
     else:
         return 1000  # 1 second for adult
+
+# Initialize the egg sprite
+# Create an animated sprite for the egg
+print("Creating initial egg sprite")
+egg_sprite = EggSprite(egg_frames, screen_width // 2, screen_height // 2 + 100)
+all_sprites.add(egg_sprite)
 
 # Main game loop
 running = True
@@ -414,9 +525,8 @@ while running:
                 # Check if the fly is dropped over the lizard
                 current_lizard = None
                 if pet_age < 1:
-                    # Can't feed the egg
-                    lizard_rect = petEgg_surface.get_rect(center=(screen_width // 2, screen_height // 2 + 100))
-                    if lizard_rect.collidepoint(mouse_pos):
+                    # Use the animated egg sprite for collision detection instead of static petEgg_surface
+                    if egg_sprite.rect.collidepoint(mouse_pos):
                         print("Fed the egg!")
                         pet_hunger = min(pet_hunger + 20, 100)
                         dragging_fly.kill()
@@ -425,6 +535,9 @@ while running:
                         if len(fly_sprites) < max_flies:
                             create_fly()
                         dragging_fly = None
+                        
+                        # Trigger a shake effect when the egg is fed
+                        egg_sprite.shake_amount = 5
                 else:
                     # Check which lizard sprite to use based on age
                     if pet_age < 10:
@@ -512,16 +625,20 @@ while running:
             last_age_update = now
             print(f"Pet age: {pet_age} years")
         
-        # Update the hunger level
+        # Update the hunger level - only when the egg has hatched
         hunger_interval = get_hunger_interval(pet_age)
-        if now - last_hunger_update >= hunger_interval:
-            pet_hunger = max(0, pet_hunger - 10)
-            last_hunger_update = now
-            print(f"Pet hunger: {pet_hunger}%")
-            
-            # Check if pet has starved
-            if pet_hunger <= 0:
-                game_state = GAME_OVER
+        if pet_age >= 1:  # Only decrease hunger if egg has hatched
+            if now - last_hunger_update >= hunger_interval:
+                pet_hunger = max(0, pet_hunger - 10)
+                last_hunger_update = now
+                print(f"Pet hunger: {pet_hunger}%")
+                
+                # Check if pet has starved
+                if pet_hunger <= 0:
+                    game_state = GAME_OVER
+        else:
+            # Ensure hunger stays at 100% while in egg stage
+            pet_hunger = 100
         
         # Render the age and hunger text
         age_text = test_font.render(f"Pet age: {pet_age} years", True, (255, 255, 255))
@@ -542,7 +659,8 @@ while running:
         all_sprites.empty()
         
         if pet_age < 1:
-            screen.blit(petEgg_surface, petEgg_surface.get_rect(center=(screen_width // 2, screen_height // 2 + 100)))
+            # Add egg sprite to be rendered
+            all_sprites.add(egg_sprite)
         elif pet_age < 10:
             all_sprites.add(baby_komodo_sprite)
         elif pet_age < 20:
@@ -550,20 +668,9 @@ while running:
         else:
             all_sprites.add(old_komodo_sprite)
         
-        # Debug: Show which sprite is active and if it's eating
-        active_sprite = None
+        # Debug info
         if pet_age < 1:
-            print("Showing egg")
-        elif pet_age < 10:
-            active_sprite = baby_komodo_sprite
-        elif pet_age < 20:
-            active_sprite = teenage_sprite
-        else:
-            active_sprite = old_komodo_sprite
-            
-        if active_sprite:
-            if active_sprite.is_eating:
-                print(f"Active sprite is eating, frame: {active_sprite.current_frame}")
+            print(f"Egg animation state - frame: {egg_sprite.current_frame}, started: {egg_sprite.animation_started}, completed: {egg_sprite.animation_completed}")
         
         # Update and draw all sprites - make sure this is called for animation to work
         all_sprites.update()

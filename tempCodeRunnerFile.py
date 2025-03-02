@@ -1,3 +1,3 @@
-if game_state == PLAYING:
-            y_position = screen_height // 8 - surface.get_height() // 2  # Position closer to the top
-            screen.blit(surface, (x_position, y_position))
+if active_sprite:
+            if hasattr(active_sprite, 'is_eating') and active_sprite.is_eating:
+                print(f"Active sprite is eating, frame: {active_sprite.current_frame}")
