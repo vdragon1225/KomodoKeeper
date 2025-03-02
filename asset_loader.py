@@ -11,10 +11,14 @@ class AssetLoader:
     A class to handle loading and managing game assets.
     This centralizes asset loading and provides error handling.
     """
-    def __init__(self):
-        self.images = {}
-        self.animations = {}
-        self.sounds = {}
+def update(self):
+    now = pygame.time.get_ticks()
+    
+    # Update background scroll - Change this line
+    self.update_background_scroll()
+    
+    # Rest of method unchanged
+    # ...
         
     def load_image(self, name, path, scale=None, convert_alpha=True):
         """Load a single image and store it under the given name."""

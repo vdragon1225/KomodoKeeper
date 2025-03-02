@@ -1,6 +1,6 @@
 import pygame
 from sprites import (
-    AnimatedSprite, EggSprite, ExplosionSprite, 
+    AnimatedSprite, EggSprite, ExplosionSprite, TombstoneSprite,
     get_max_flies, extract_frames
 )
 from utils import (
@@ -33,6 +33,7 @@ class Game:
         self.baby_komodo_sprite = None
         self.teenage_sprite = None
         self.old_komodo_sprite = None
+        self.tombstone_sprite = None
         
         # Drag and drop
         self.dragging_fly = None
@@ -174,11 +175,14 @@ class Game:
         # Clear any existing explosions
         self.explosion_sprites.empty()
         
+        # Clear the tombstone if it exists
+        self.tombstone_sprite = None
+        
     def update(self):
         now = pygame.time.get_ticks()
         
         # Update background scroll
-        self.update_background_scroll()
+        self.background_scroll()
             
         # Only update game logic if in PLAYING state
         if self.game_state == PLAYING:
@@ -224,6 +228,11 @@ class Game:
                     # Check if pet has starved
                     if self.pet_hunger <= 0:
                         self.game_state = GAME_OVER
+                        # Create tombstone when lizard dies
+                        self.tombstone_sprite = TombstoneSprite(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 100)
+                        # Update flies to fly around the tombstone
+                        for fly in self.fly_sprites:
+                            fly.avoid_center = True
             else:
                 # Ensure hunger stays at 100% while in egg stage
                 self.pet_hunger = 100
@@ -245,6 +254,20 @@ class Game:
             for fly in self.fly_sprites:
                 fly.update_pet_age(self.pet_age)
                 
+        # Handle game over state
+        elif self.game_state == GAME_OVER:
+            # If no tombstone exists, create one
+            if not self.tombstone_sprite:
+                self.tombstone_sprite = TombstoneSprite(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 100)
+            
+            # Make sure it's in the all_sprites group
+            self.all_sprites.empty()
+            self.all_sprites.add(self.tombstone_sprite)
+            
+            # Update flies to fly around the tombstone
+            for fly in self.fly_sprites:
+                fly.avoid_center = True
+        
         # Update all sprite groups
         self.all_sprites.update()
         self.fly_sprites.update()
@@ -285,45 +308,12 @@ class Game:
                         create_fly(self.fly_frames, self.fly_sprites, self.pet_age, max_flies)
                     self.dragging_fly = None
                     
-                    # Trigger a shake effect when the egg is fed
-                    self.egg_sprite.shake_amount = 5
-            else:
-                # Check which lizard sprite to use based on age
-                if self.pet_age < 10:
-                    current_lizard = self.baby_komodo_sprite
-                    print("Baby komodo will eat")
-                elif self.pet_age < 20:
-                    current_lizard = self.teenage_sprite
-                    print("Teenage komodo will eat")
-                else:
-                    current_lizard = self.old_komodo_sprite
-                    print("Old komodo will eat")
-                
-                if current_lizard and current_lizard.rect.collidepoint(mouse_pos):
-                    print(f"Fed the lizard! (Age: {self.pet_age})")
-                    # Explicitly trigger eating animation with debug
-                    current_lizard.start_eating()
-                    self.pet_hunger = min(self.pet_hunger + 20, 100)
-                    self.dragging_fly.kill()
-                    # Create a new fly to replace the eaten one if not exceeding max
-                    max_flies = get_max_flies(self.pet_age)
-                    if len(self.fly_sprites) < max_flies:
-                        create_fly(self.fly_frames, self.fly_sprites, self.pet_age, max_flies)
-                    self.dragging_fly = None
-            
-            # If not dropped on lizard, return fly to original position
-            if self.dragging_fly:
-                self.dragging_fly.stop_drag()
-                self.dragging_fly = None
-                
-    def handle_mouse_motion(self, mouse_pos):
-        # Update dragged fly position
-        if self.dragging_fly:
-            self.dragging_fly.update_drag_position(mouse_pos)
-            
-    def update_background_scroll(self):
-        # Update background position for scrolling effect regardless of game state
-        self.background_scroll -= self.background_scroll_speed
-        # Reset when the first background has completely scrolled off-screen
-        if self.background_scroll <= -SCREEN_WIDTH:
-            self.background_scroll = 0
+                    # Trigger a shake effect
+                    # Add this method to the Game class in game.py
+
+def update_background_scroll(self):
+    # Update background position for scrolling effect regardless of game state
+    self.background_scroll -= self.background_scroll_speed
+    # Reset when the first background has completely scrolled off-screen
+    if self.background_scroll <= -SCREEN_WIDTH:
+        self.background_scroll = 0
