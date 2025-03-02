@@ -226,8 +226,8 @@ class EggSprite(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=(x, y))
         self.animation_completed = False
         self.animation_started = False
-        self.frame_delay = 2000  # 2 seconds between frames
-        self.start_delay = 3000  # 3 seconds before animation starts
+        self.frame_delay = 1000  # Reduced from 2000 to 1000 ms - faster frame rate
+        self.start_delay = 1500  # Reduced from 3000 to 1500 ms - starts sooner
         self.last_update = pygame.time.get_ticks()
         self.start_time = pygame.time.get_ticks()
         
@@ -235,9 +235,13 @@ class EggSprite(pygame.sprite.Sprite):
         self.shake_amount = 0
         self.original_pos = (x, y)
         print(f"New egg sprite created at position {(x, y)}")
+        self.just_hatched = False  # New flag to indicate when hatching just completed
     
     def update(self):
         now = pygame.time.get_ticks()
+        
+        # Reset the just_hatched flag at the start of each update
+        self.just_hatched = False
         
         # Don't update if animation is completed
         if self.animation_completed:
@@ -263,8 +267,10 @@ class EggSprite(pygame.sprite.Sprite):
             # Check if we've reached the end
             if self.current_frame >= len(self.frames):
                 self.current_frame = len(self.frames) - 1
-                self.animation_completed = True
-                print(f"Egg animation complete! Staying on final frame")
+                if not self.animation_completed:  # Only set just_hatched if this is the first time completing
+                    self.animation_completed = True
+                    self.just_hatched = True  # Signal that we just hatched this frame
+                    print("Egg just hatched! Ready for baby komodo.")
             
             # Update the image and timestamp
             self.image = self.frames[self.current_frame]
@@ -503,23 +509,6 @@ while running:
                         fly.start_drag()
                         break
                 
-                # If not dragging a fly, check if control buttons are clicked
-                if not dragging_fly:
-                    # Left arrow button
-                    left_arrow_rect = pygame.Rect(screen_width // 4 - 20, 7 * screen_height // 8 - 15, 40, 30)
-                    if left_arrow_rect.collidepoint(mouse_pos):
-                        print("Left arrow clicked")
-                    
-                    # Circle button
-                    circle_center = (screen_width // 2, 7 * screen_height // 8)
-                    if math.sqrt((mouse_pos[0] - circle_center[0])**2 + (mouse_pos[1] - circle_center[1])**2) < 20:
-                        print("Circle button clicked")
-                    
-                    # Right arrow button
-                    right_arrow_rect = pygame.Rect(3 * screen_width // 4 - 20, 7 * screen_height // 8 - 15, 40, 30)
-                    if right_arrow_rect.collidepoint(mouse_pos):
-                        print("Right arrow clicked")
-        
         elif event.type == pygame.MOUSEBUTTONUP:
             if dragging_fly:
                 # Check if the fly is dropped over the lizard
@@ -620,7 +609,16 @@ while running:
     elif game_state == PLAYING:
         # Update the age of the pet every 3 seconds (3000 milliseconds)
         now = pygame.time.get_ticks()
-        if now - last_age_update >= 3000:
+        
+        # Check if egg has just hatched - trigger immediate transition
+        if pet_age == 0 and egg_sprite.animation_completed:
+            if egg_sprite.just_hatched or now - last_age_update >= 1500:  # If just hatched or waited enough time
+                # Force immediate transition to baby komodo
+                pet_age = 1
+                last_age_update = now
+                print(f"Egg hatched! Pet age advanced to {pet_age} years")
+        # Regular age updates for older pets
+        elif now - last_age_update >= 3000:
             pet_age += 1
             last_age_update = now
             print(f"Pet age: {pet_age} years")
@@ -679,25 +677,6 @@ while running:
         # Update and draw flies
         fly_sprites.update()
         fly_sprites.draw(screen)
-        
-        # Optionally draw boundaries for debugging
-        # pygame.draw.line(screen, (255, 0, 0), (0, FLY_BOUNDARY_TOP), (screen_width, FLY_BOUNDARY_TOP), 1)
-        # pygame.draw.line(screen, (255, 0, 0), (0, FLY_BOUNDARY_BOTTOM), (screen_width, FLY_BOUNDARY_BOTTOM), 1)
-        pygame.draw.polygon(screen, 'White', [
-            (screen_width // 4 - 20, 7 * screen_height // 8),  # Left point
-            (screen_width // 4 + 10, 7 * screen_height // 8 - 15),  # Top-right
-            (screen_width // 4 + 10, 7 * screen_height // 8 + 15)   # Bottom-right
-        ])
-
-        # Middle circle
-        pygame.draw.circle(screen, 'White', (screen_width // 2, 7 * screen_height // 8), 20)
-
-        # Right arrow (pointing right)
-        pygame.draw.polygon(screen, 'White', [
-            (3 * screen_width // 4 + 20, 7 * screen_height // 8),  # Right point
-            (3 * screen_width // 4 - 10, 7 * screen_height // 8 - 15),  # Top-left
-            (3 * screen_width // 4 - 10, 7 * screen_height // 8 + 15)   # Bottom-left
-        ])
     
     # Game over state
     elif game_state == GAME_OVER:
