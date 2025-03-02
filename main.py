@@ -95,34 +95,101 @@ old_komodo_frames = [
     pygame.image.load('graphics/oldKomodo6.png').convert_alpha()
 ]
 
+# Load animation frames for komodo eating
+komodo_eating_frames = [
+    pygame.image.load('graphics/komodoEating1.png').convert_alpha(),
+    pygame.image.load('graphics/komodoEating2.png').convert_alpha(),
+    pygame.image.load('graphics/komodoEating3.png').convert_alpha(),
+    pygame.image.load('graphics/komodoEating4.png').convert_alpha(),
+    pygame.image.load('graphics/komodoEating5.png').convert_alpha(),
+    pygame.image.load('graphics/komodoEating6.png').convert_alpha(),
+    pygame.image.load('graphics/komodoEating7.png').convert_alpha(),
+    pygame.image.load('graphics/komodoEating8.png').convert_alpha()
+]
+
+baby_komodo_eating_frames = [
+    pygame.image.load('graphics/babyKomodoEating1.png').convert_alpha(),
+    pygame.image.load('graphics/babyKomodoEating2.png').convert_alpha(),
+    pygame.image.load('graphics/babyKomodoEating3.png').convert_alpha(),
+    pygame.image.load('graphics/babyKomodoEating4.png').convert_alpha()
+]
+
 # Scale frames to the desired size
 pet_frames = [pygame.transform.scale(frame, (250, 250)) for frame in teenage_frames]
 baby_komodo_frames = [pygame.transform.scale(frame, (250, 250)) for frame in baby_komodo_frames]
 old_komodo_frames = [pygame.transform.scale(frame, (250, 250)) for frame in old_komodo_frames]
+komodo_eating_frames = [pygame.transform.scale(frame, (250, 250)) for frame in komodo_eating_frames]
+baby_komodo_eating_frames = [pygame.transform.scale(frame, (250, 250)) for frame in baby_komodo_eating_frames]
 
 # Create an animated sprite
 class AnimatedSprite(pygame.sprite.Sprite):
     def __init__(self, frames, x, y):
         super().__init__()
         self.frames = frames
+        self.eating_frames = komodo_eating_frames  # Add eating frames
         self.current_frame = 0
         self.image = self.frames[self.current_frame]
         self.rect = self.image.get_rect(center=(x, y))
         self.animation_speed = 0.1  # Adjust the speed of the animation
         self.last_update = pygame.time.get_ticks()
+        self.is_eating = False
+        self.eating_timer = 0
+        self.eating_duration = 500
 
     def update(self):
         now = pygame.time.get_ticks()
-        if now - self.last_update > 100:  # Adjust the frame rate of the animation
-            self.last_update = now
-            self.current_frame = (self.current_frame + 1) % len(self.frames)
-            self.image = self.frames[self.current_frame]
+        # If eating animation is active
+        if self.is_eating:
+            if now - self.last_update > 100:  # Faster animation for eating
+                self.last_update = now
+                self.current_frame = (self.current_frame + 1) % len(self.eating_frames)
+                self.image = self.eating_frames[self.current_frame]
+                # Debug: Print current eating frame
+                print(f"Eating frame: {self.current_frame}")
+            
+            # Check if eating animation should end
+            if now - self.eating_timer > self.eating_duration:
+                print("Eating animation finished")
+                self.is_eating = False
+                self.current_frame = 0
+        else:
+            # Regular animation
+            if now - self.last_update > 100:
+                self.last_update = now
+                self.current_frame = (self.current_frame + 1) % len(self.frames)
+                self.image = self.frames[self.current_frame]
+
+    def start_eating(self):
+        print("Starting eating animation")  # Debug print
+        self.is_eating = True
+        self.eating_timer = pygame.time.get_ticks()
+        self.current_frame = 0
+        # Ensure we immediately show the first eating frame
+        self.image = self.eating_frames[0]
+
+# Function to calculate fly speed based on pet's age
+def get_fly_speed(age):
+    if age < 10:
+        return 3  # Reduced speed for baby
+    elif age < 20:
+        return 4.5  # Reduced speed for teenager
+    else:
+        return 6  # Reduced speed for adult
+
+# Function to calculate the maximum number of flies based on pet's age
+def get_max_flies(age):
+    if age < 10:
+        return 3  # Maximum 3 flies for baby
+    elif age < 20:
+        return 2  # Maximum 2 flies for teenager
+    else:
+        return 1  # Maximum 1 fly for adult
 
 # Create a fly sprite that moves around
 class FlySprite(AnimatedSprite):
     def __init__(self, frames, x, y):
         super().__init__(frames, x, y)
-        self.speed = 2
+        self.speed = get_fly_speed(pet_age)  # Set initial speed based on pet's age
         self.direction = random.uniform(0, 2 * math.pi)  # Random direction in radians
         self.direction_change_time = pygame.time.get_ticks()
         self.being_dragged = False
@@ -130,6 +197,9 @@ class FlySprite(AnimatedSprite):
 
     def update(self):
         super().update()
+        
+        # Update speed based on pet's age
+        self.speed = get_fly_speed(pet_age)
         
         # Only move if not being dragged
         if not self.being_dragged:
@@ -201,19 +271,26 @@ quit_button = Button(screen_width//2 - 100, screen_height//2 + 70, 200, 50, "Qui
 retry_button = Button(screen_width//2 - 100, screen_height//2, 200, 50, "Retry", (0, 150, 0), (0, 200, 0))
 exit_button = Button(screen_width//2 - 100, screen_height//2 + 70, 200, 50, "Exit", (150, 0, 0), (200, 0, 0))
 
-# Create an instance of the animated sprite
+# Create an instance of the animated sprite with explicitly assigned eating frames
 teenage_sprite = AnimatedSprite(pet_frames, screen_width // 2, screen_height // 2 + 100)
+teenage_sprite.eating_frames = komodo_eating_frames
+
 baby_komodo_sprite = AnimatedSprite(baby_komodo_frames, screen_width // 2, screen_height // 2 + 100)
+baby_komodo_sprite.eating_frames = baby_komodo_eating_frames  # Changed to use baby-specific eating frames
+
 old_komodo_sprite = AnimatedSprite(old_komodo_frames, screen_width // 2, screen_height // 2 + 100)
+old_komodo_sprite.eating_frames = komodo_eating_frames  # Explicitly assign eating frames for old
 
 # Create fly sprites
 fly_sprites = pygame.sprite.Group()
 
 def create_fly():
-    fly = FlySprite(fly_frames, 
-                    random.randint(50, screen_width - 50), 
-                    random.randint(FLY_BOUNDARY_TOP + 20, FLY_BOUNDARY_BOTTOM - 20))
-    fly_sprites.add(fly)
+    max_flies = get_max_flies(pet_age)
+    if len(fly_sprites) < max_flies:  # Ensure there are only up to the maximum number of flies
+        fly = FlySprite(fly_frames, 
+                        random.randint(50, screen_width - 50), 
+                        random.randint(FLY_BOUNDARY_TOP + 20, FLY_BOUNDARY_BOTTOM - 20))
+        fly_sprites.add(fly)
 
 # No menu flies as per requirement
 menu_flies = pygame.sprite.Group()
@@ -238,9 +315,11 @@ def reset_game():
     last_age_update = pygame.time.get_ticks()
     last_hunger_update = pygame.time.get_ticks()
     
-    # Clear and create just ONE fly at the start
+    # Clear and create flies based on the initial maximum number of flies
     fly_sprites.empty()
-    create_fly()
+    max_flies = get_max_flies(pet_age)
+    for _ in range(max_flies):
+        create_fly()
 
 # Create a surface for the pet and scale it to a larger size
 petEgg_surface = pygame.image.load('graphics/komodoEgg.png').convert_alpha()
@@ -248,6 +327,15 @@ petEgg_surface = pygame.transform.scale(petEgg_surface, (250, 250))  # Scale to 
 
 # Variables for drag and drop functionality
 dragging_fly = None
+
+# Function to calculate hunger interval based on age
+def get_hunger_interval(age):
+    if age < 10:
+        return 1000  # 1 second for baby
+    elif age < 20:
+        return 1000  # 1 second for teenager
+    else:
+        return 1000  # 1 second for adult
 
 # Main game loop
 running = True
@@ -307,33 +395,39 @@ while running:
                 # Check if the fly is dropped over the lizard
                 current_lizard = None
                 if pet_age < 1:
+                    # Can't feed the egg
                     lizard_rect = petEgg_surface.get_rect(center=(screen_width // 2, screen_height // 2 + 100))
                     if lizard_rect.collidepoint(mouse_pos):
                         print("Fed the egg!")
                         pet_hunger = min(pet_hunger + 20, 100)
                         dragging_fly.kill()
-                        # Create ONE new fly to replace the eaten one
-                        create_fly()
-                        # Create ONE additional fly
-                        create_fly()
+                        # Only create a new fly if there are fewer than max allowed flies
+                        max_flies = get_max_flies(pet_age)
+                        if len(fly_sprites) < max_flies:
+                            create_fly()
                         dragging_fly = None
                 else:
                     # Check which lizard sprite to use based on age
                     if pet_age < 10:
                         current_lizard = baby_komodo_sprite
+                        print("Baby komodo will eat")
                     elif pet_age < 20:
                         current_lizard = teenage_sprite
+                        print("Teenage komodo will eat")
                     else:
                         current_lizard = old_komodo_sprite
+                        print("Old komodo will eat")
                     
                     if current_lizard and current_lizard.rect.collidepoint(mouse_pos):
-                        print("Fed the lizard!")
+                        print(f"Fed the lizard! (Age: {pet_age})")
+                        # Explicitly trigger eating animation with debug
+                        current_lizard.start_eating()
                         pet_hunger = min(pet_hunger + 20, 100)
                         dragging_fly.kill()
-                        # Create ONE new fly to replace the eaten one
-                        create_fly()
-                        # Create ONE additional fly
-                        create_fly()
+                        # Create a new fly to replace the eaten one if not exceeding max
+                        max_flies = get_max_flies(pet_age)
+                        if len(fly_sprites) < max_flies:
+                            create_fly()
                         dragging_fly = None
                 
                 # If not dropped on lizard, return fly to original position
@@ -383,7 +477,7 @@ while running:
         
         # Add game description
         desc_text = test_font.render("Take care of your reptile pet and watch it grow!", True, (255, 255, 255))
-        desc_rect = desc_text.get_rect(center=(screen_width // 2, screen_height // 2 - 95))
+        desc_rect = desc_text.get_rect(center=(screen_width // 2, screen_height // 2 - 105))
         screen.blit(desc_text, desc_rect)
         
         # Draw buttons
@@ -392,19 +486,16 @@ while running:
     
     # Playing state
     elif game_state == PLAYING:
-        # Update the age of the pet every 1 second (for demo, change to 60000 for production)
+        # Update the age of the pet every 3 seconds (3000 milliseconds)
         now = pygame.time.get_ticks()
-        if now - last_age_update >= 1000:
+        if now - last_age_update >= 3000:
             pet_age += 1
             last_age_update = now
             print(f"Pet age: {pet_age} years")
-            
-            # Check if pet has reached end of life
-            if pet_age >= 30:
-                game_state = GAME_OVER
         
         # Update the hunger level
-        if now - last_hunger_update >= 2000:
+        hunger_interval = get_hunger_interval(pet_age)
+        if now - last_hunger_update >= hunger_interval:
             pet_hunger = max(0, pet_hunger - 10)
             last_hunger_update = now
             print(f"Pet hunger: {pet_hunger}%")
@@ -440,7 +531,22 @@ while running:
         else:
             all_sprites.add(old_komodo_sprite)
         
-        # Update and draw all sprites
+        # Debug: Show which sprite is active and if it's eating
+        active_sprite = None
+        if pet_age < 1:
+            print("Showing egg")
+        elif pet_age < 10:
+            active_sprite = baby_komodo_sprite
+        elif pet_age < 20:
+            active_sprite = teenage_sprite
+        else:
+            active_sprite = old_komodo_sprite
+            
+        if active_sprite:
+            if active_sprite.is_eating:
+                print(f"Active sprite is eating, frame: {active_sprite.current_frame}")
+        
+        # Update and draw all sprites - make sure this is called for animation to work
         all_sprites.update()
         all_sprites.draw(screen)
         
