@@ -40,18 +40,18 @@ last_hunger_update = pygame.time.get_ticks()
 
 # Load animation frames
 teenage_frames = [
-    pygame.image.load('graphics/komodoWalking1.png').convert_alpha(),
-    pygame.image.load('graphics/komodoWalking2.png').convert_alpha(),
-    pygame.image.load('graphics/komodoWalking3.png').convert_alpha(),
-    pygame.image.load('graphics/komodoWalking4.png').convert_alpha()
+    pygame.image.load('graphics/midkomodowalking/komodoWalking1.png').convert_alpha(),
+    pygame.image.load('graphics/midkomodowalking/komodoWalking2.png').convert_alpha(),
+    pygame.image.load('graphics/midkomodowalking/komodoWalking3.png').convert_alpha(),
+    pygame.image.load('graphics/midkomodowalking/komodoWalking4.png').convert_alpha()
 ]
 
 # Load animation frames for baby Komodo
 baby_komodo_frames = [
-    pygame.image.load('graphics/babyKomodo1.png').convert_alpha(),
-    pygame.image.load('graphics/babyKomodo2.png').convert_alpha(),
-    pygame.image.load('graphics/babyKomodo3.png').convert_alpha(),
-    pygame.image.load('graphics/babyKomodo4.png').convert_alpha()
+    pygame.image.load('graphics/Baby/babyKomodo1.png').convert_alpha(),
+    pygame.image.load('graphics/Baby/babyKomodo2.png').convert_alpha(),
+    pygame.image.load('graphics/Baby/babyKomodo3.png').convert_alpha(),
+    pygame.image.load('graphics/Baby/babyKomodo4.png').convert_alpha()
 ]
 
 
@@ -88,32 +88,32 @@ except ValueError as e:
 
 # Load animation frames for old komodo
 old_komodo_frames = [
-    pygame.image.load('graphics/oldKomodo1.png').convert_alpha(),
-    pygame.image.load('graphics/oldKomodo2.png').convert_alpha(),
-    pygame.image.load('graphics/oldKomodo3.png').convert_alpha(),
-    pygame.image.load('graphics/oldKomodo4.png').convert_alpha(),
-    pygame.image.load('graphics/oldKomodo5.png').convert_alpha(),
-    pygame.image.load('graphics/oldKomodo6.png').convert_alpha()
+    pygame.image.load('graphics/oldkomodo/oldKomodo1.png').convert_alpha(),
+    pygame.image.load('graphics/oldkomodo/oldKomodo2.png').convert_alpha(),
+    pygame.image.load('graphics/oldkomodo/oldKomodo3.png').convert_alpha(),
+    pygame.image.load('graphics/oldkomodo/oldKomodo4.png').convert_alpha(),
+    pygame.image.load('graphics/oldkomodo/oldKomodo5.png').convert_alpha(),
+    pygame.image.load('graphics/oldkomodo/oldKomodo6.png').convert_alpha()
 ]
 
 # Load animation frames for komodo eating
 komodo_eating_frames = [
-    pygame.image.load('graphics/komodoEating1.png').convert_alpha(),
-    pygame.image.load('graphics/komodoEating2.png').convert_alpha(),
-    pygame.image.load('graphics/komodoEating3.png').convert_alpha(),
-    pygame.image.load('graphics/komodoEating4.png').convert_alpha(),
-    pygame.image.load('graphics/komodoEating5.png').convert_alpha(),
-    pygame.image.load('graphics/komodoEating6.png').convert_alpha(),
-    pygame.image.load('graphics/komodoEating7.png').convert_alpha(),
-    pygame.image.load('graphics/komodoEating8.png').convert_alpha()
+    pygame.image.load('graphics/midkomodoeating/komodoEating1.png').convert_alpha(),
+    pygame.image.load('graphics/midkomodoeating/komodoEating2.png').convert_alpha(),
+    pygame.image.load('graphics/midkomodoeating/komodoEating3.png').convert_alpha(),
+    pygame.image.load('graphics/midkomodoeating/komodoEating4.png').convert_alpha(),
+    pygame.image.load('graphics/midkomodoeating/komodoEating5.png').convert_alpha(),
+    pygame.image.load('graphics/midkomodoeating/komodoEating6.png').convert_alpha(),
+    pygame.image.load('graphics/midkomodoeating/komodoEating7.png').convert_alpha(),
+    pygame.image.load('graphics/midkomodoeating/komodoEating8.png').convert_alpha()
 ]
 
 # Load animation frames for baby komodo eating
 baby_komodo_eating_frames = [
-    pygame.image.load('graphics/babyKomodoEating1.png').convert_alpha(),
-    pygame.image.load('graphics/babyKomodoEating2.png').convert_alpha(),
-    pygame.image.load('graphics/babyKomodoEating3.png').convert_alpha(),
-    pygame.image.load('graphics/babyKomodoEating4.png').convert_alpha()
+    pygame.image.load('graphics/baby/babyKomodoEating1.png').convert_alpha(),
+    pygame.image.load('graphics/baby/babyKomodoEating2.png').convert_alpha(),
+    pygame.image.load('graphics/baby/babyKomodoEating3.png').convert_alpha(),
+    pygame.image.load('graphics/baby/babyKomodoEating4.png').convert_alpha()
 ]
 
 # Load animation frames for old komodo eating
@@ -122,6 +122,16 @@ old_komodo_eating_frames = [
     pygame.image.load('graphics/oldKomodoEating2.png').convert_alpha()
 ]
 
+<<<<<<< Updated upstream
+=======
+# Load animation frames for egg cracking
+egg_frames = [
+    pygame.image.load('graphics/egg/komodoEgg1.png').convert_alpha(),
+    pygame.image.load('graphics/egg/komodoEgg2.png').convert_alpha(),
+    pygame.image.load('graphics/egg/komodoEgg3.png').convert_alpha()
+]
+
+>>>>>>> Stashed changes
 # Scale frames to the desired size
 pet_frames = [pygame.transform.scale(frame, (250, 250)) for frame in teenage_frames]
 baby_komodo_frames = [pygame.transform.scale(frame, (250, 250)) for frame in baby_komodo_frames]
