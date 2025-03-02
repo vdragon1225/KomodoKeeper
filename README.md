@@ -67,8 +67,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgements
 
-- Sound effects from [XXX
 - Special thanks to the Pygame community for their resources and support
+- Pickshack advisors
 
 ## 📬 Contact
 
