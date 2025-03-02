@@ -1,6 +1,6 @@
 # 🦎 Komodo Keeper - Take care of your reptile friend and watch it grow! 
 
-A Tamagotchi-style virtual pet simulator focused on reptiles, built with Pygame. Adopt, raise, and care for your digital reptile companions!
+A Tamagotchi-inspired virtual pet simulator focused on reptiles, built with Pygame. Adopt, raise, and care for your digital reptile companions!
 
 ## 🌟 Features
 
