@@ -4,12 +4,7 @@
 </p>
 A Tamagotchi-inspired virtual pet simulator focused on reptiles, built with Pygame. Adopt, raise, and care for your digital reptile companions!
 
-## 🌟 Features
-
-
-
 ## 📋 Prerequisites
-
 - Python 3.7+
 - Pygame 2.0+
 
@@ -32,31 +27,24 @@ python main.py
 ```
 
 ## 🎮 How to Play
-
-- **Create a New Reptile**: Choose a species and name your new pet
-- **Feed**: Click the Feed button when your reptile is hungry
-- **Play**: Interact with your reptile to increase its happiness
-- **Clean**: Maintain cleanliness to prevent health issues
-- **Medicate**: Treat your reptile when it gets sick
-- **Save/Load**: Save your progress and continue where you left off
-
-## 🖼️ Screenshots
-
-
+- **Press Start**
+- **Use Mouse** to grab flies and drop on Komodo Dragon
+- **Keep Hunger Rate Above 0**
 
 ## 🛠️ Technologies Used
-
+- **VS Code**
+- **GitHub Copilot**
+- **Claude 3.7 Thinking**
+- **Pixilart**
 - **Python** - Primary programming language
 - **Pygame** - Game development library
 
 ## 🎨 Art Assets Creation
-
-## 📝 Development Roadmap
-
+- Pixilart
+- Leonardo.ai
+  
 ## 👨‍💻 Contributing
-
 Contributions are welcome! Please feel free to submit a Pull Request.
-
 1. Fork the project
 2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
 3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
@@ -64,14 +52,12 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 5. Open a Pull Request
 
 ## 📄 License
-
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgements
-
 - Special thanks to the Pygame community for their resources and support
 - Pickshack advisors
-
+  
 ## 📬 Contact
 
 - Symere - kccup 
