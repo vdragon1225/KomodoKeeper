@@ -54,6 +54,7 @@ baby_komodo_frames = [
     pygame.image.load('graphics/babyKomodo4.png').convert_alpha()
 ]
 
+
 # Load the sprite sheet
 sprite_sheet = pygame.image.load('graphics/fly.png').convert_alpha()
 
@@ -107,11 +108,18 @@ komodo_eating_frames = [
     pygame.image.load('graphics/komodoEating8.png').convert_alpha()
 ]
 
+# Load animation frames for baby komodo eating
 baby_komodo_eating_frames = [
     pygame.image.load('graphics/babyKomodoEating1.png').convert_alpha(),
     pygame.image.load('graphics/babyKomodoEating2.png').convert_alpha(),
     pygame.image.load('graphics/babyKomodoEating3.png').convert_alpha(),
     pygame.image.load('graphics/babyKomodoEating4.png').convert_alpha()
+]
+
+# Load animation frames for old komodo eating
+old_komodo_eating_frames = [
+    pygame.image.load('graphics/oldKomodoEating1.png').convert_alpha(),
+    pygame.image.load('graphics/oldKomodoEating2.png').convert_alpha()
 ]
 
 # Scale frames to the desired size
@@ -120,6 +128,7 @@ baby_komodo_frames = [pygame.transform.scale(frame, (250, 250)) for frame in bab
 old_komodo_frames = [pygame.transform.scale(frame, (250, 250)) for frame in old_komodo_frames]
 komodo_eating_frames = [pygame.transform.scale(frame, (250, 250)) for frame in komodo_eating_frames]
 baby_komodo_eating_frames = [pygame.transform.scale(frame, (250, 250)) for frame in baby_komodo_eating_frames]
+old_komodo_eating_frames = [pygame.transform.scale(frame, (250, 250)) for frame in old_komodo_eating_frames]
 
 # Create an animated sprite
 class AnimatedSprite(pygame.sprite.Sprite):
@@ -279,7 +288,7 @@ baby_komodo_sprite = AnimatedSprite(baby_komodo_frames, screen_width // 2, scree
 baby_komodo_sprite.eating_frames = baby_komodo_eating_frames  # Changed to use baby-specific eating frames
 
 old_komodo_sprite = AnimatedSprite(old_komodo_frames, screen_width // 2, screen_height // 2 + 100)
-old_komodo_sprite.eating_frames = komodo_eating_frames  # Explicitly assign eating frames for old
+old_komodo_sprite.eating_frames = old_komodo_eating_frames  # Changed to use old-specific eating frames
 
 # Create fly sprites
 fly_sprites = pygame.sprite.Group()
