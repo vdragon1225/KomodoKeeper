@@ -44,7 +44,8 @@ BACKGROUND_SCROLL_SPEED = 1  # Pixels per frame - adjust for faster/slower scrol
 ASSET_PATHS = {
     'background': 'graphics/background.png',
     'logo': 'graphics/startPageLogo.png',
-    'fly': 'graphics/fly.png'
+    'fly': 'graphics/fly.png',
+    'tombstone': 'graphics/tombstone.png'  # Added the tombstone path
 }
 
 # Animation timing settings
@@ -53,6 +54,11 @@ EATING_DURATION = 500
 EGG_ANIMATION_DELAY = 1500
 HUNGER_UPDATE_INTERVAL = 1000  # Base interval in ms
 AGE_INCREMENT_INTERVAL = 3000  # Time between age increments in ms
+
+# Tombstone settings
+TOMBSTONE_SIZE = (260, 360)  # Size for the tombstone image (2x bigger)
+TOMBSTONE_FLY_RADIUS = 140  # Increased radius for flies to swarm around the larger tombstone
+TOMBSTONE_FLY_COUNT = 8  # Number of flies in game over state
 
 #----------------------------------------------------------------------
 # UTILITY FUNCTIONS
@@ -295,6 +301,57 @@ def get_max_flies(age):
     else:
         return 1  # Maximum 1 fly for adult
 
+# Tombstone sprite class
+class TombstoneSprite(pygame.sprite.Sprite):
+    def __init__(self, x, y, size=TOMBSTONE_SIZE):
+        super().__init__()
+        # Try to load the tombstone image
+        try:
+            self.image = pygame.image.load('graphics/tombstone.png').convert_alpha()
+            
+            # Get original dimensions for proper aspect ratio scaling
+            orig_width, orig_height = self.image.get_size()
+            aspect_ratio = orig_width / orig_height
+            
+            # Determine new dimensions while preserving aspect ratio
+            # If the original image is already stretched, we'll correct it
+            new_width = size[0]
+            new_height = size[1]
+            
+            # If needed, adjust based on aspect ratio to prevent distortion
+            if new_width / new_height != aspect_ratio:
+                # We'll prioritize the height and adjust width accordingly
+                new_width = int(new_height * aspect_ratio)
+                if new_width > size[0] * 1.2:  # Limit maximum width
+                    new_width = size[0]
+                    new_height = int(new_width / aspect_ratio)
+            
+            self.image = pygame.transform.scale(self.image, (new_width, new_height))
+            print(f"Tombstone scaled to {new_width}x{new_height}")
+            
+        except Exception as e:
+            print(f"Error loading tombstone image: {e}")
+            # Create a placeholder tombstone
+            self.image = pygame.Surface(size, pygame.SRCALPHA)
+            # Draw a more tombstone-like shape
+            tombstone_color = (120, 120, 120)
+            # Base
+            pygame.draw.rect(self.image, tombstone_color, (size[0]//4, size[1]//2, size[0]//2, size[1]//2))
+            # Top rounded part
+            pygame.draw.rect(self.image, tombstone_color, (size[0]//4, 0, size[0]//2, size[1]//2), border_radius=15)
+            # Add some texture/details
+            darker_color = (80, 80, 80)
+            pygame.draw.rect(self.image, darker_color, (size[0]//4, 0, size[0]//2, size[1]//2), 3, border_radius=15)
+            pygame.draw.line(self.image, darker_color, (size[0]//2, size[1]//4), (size[0]//2, size[1]//2 + size[1]//4), 2)
+        
+        self.rect = self.image.get_rect(center=(x, y))
+        self.death_time = pygame.time.get_ticks()
+        
+        # Define an invisible boundary for flies
+        self.boundary_rect = self.rect.inflate(TOMBSTONE_FLY_RADIUS*2, TOMBSTONE_FLY_RADIUS*2)
+        
+        print(f"Tombstone created at {x}, {y}")
+
 # Base animated sprite class
 class AnimatedSprite(pygame.sprite.Sprite):
     def __init__(self, frames, x, y):
@@ -428,6 +485,12 @@ class FlySprite(AnimatedSprite):
         self.being_dragged = False
         self.original_rect = self.rect.copy()
         self.pet_age = pet_age  # Store pet_age for speed updates
+        self.game_over_mode = False  # Flag for special behavior during game over
+        self.orbit_angle = random.uniform(0, 2 * math.pi)  # Starting angle for orbit
+        self.orbit_speed = random.uniform(0.02, 0.05)  # Speed of orbit
+        self.orbit_distance = random.uniform(TOMBSTONE_FLY_RADIUS - 20, TOMBSTONE_FLY_RADIUS + 20)  # Random orbit distance
+        self.orbit_center = None  # Will be set when game over occurs
+        self.orbit_height_offset = random.uniform(-30, 30)  # Vertical variation
 
     def update(self):
         super().update()
@@ -437,31 +500,46 @@ class FlySprite(AnimatedSprite):
         
         # Only move if not being dragged
         if not self.being_dragged:
-            # Change direction randomly
-            now = pygame.time.get_ticks()
-            if now - self.direction_change_time > 500:  # Change direction every 0.5 seconds
-                self.direction += random.uniform(-math.pi/4, math.pi/4)  # Add small random change
-                self.direction_change_time = now
+            if self.game_over_mode and self.orbit_center:
+                # Orbit around tombstone behavior
+                self.orbit_angle += self.orbit_speed
+                
+                # Calculate position on elliptical orbit
+                orbit_x = self.orbit_center[0] + math.cos(self.orbit_angle) * self.orbit_distance
+                orbit_y = self.orbit_center[1] + math.sin(self.orbit_angle) * (self.orbit_distance * 0.7) + self.orbit_height_offset
+                
+                # Add slight random movement for more natural behavior
+                orbit_x += random.uniform(-1, 1)
+                orbit_y += random.uniform(-1, 1)
+                
+                self.rect.center = (orbit_x, orbit_y)
+            else:
+                # Normal movement behavior
+                # Change direction randomly
+                now = pygame.time.get_ticks()
+                if now - self.direction_change_time > 500:  # Change direction every 0.5 seconds
+                    self.direction += random.uniform(-math.pi/4, math.pi/4)  # Add small random change
+                    self.direction_change_time = now
 
-            # Move in current direction
-            dx = self.speed * math.cos(self.direction)
-            dy = self.speed * math.sin(self.direction)
-            self.rect.x += dx
-            self.rect.y += dy
+                # Move in current direction
+                dx = self.speed * math.cos(self.direction)
+                dy = self.speed * math.sin(self.direction)
+                self.rect.x += dx
+                self.rect.y += dy
 
-            # Bounce off edges of screen and boundaries
-            if self.rect.left < 0:
-                self.rect.left = 0
-                self.direction = random.uniform(-math.pi/2, math.pi/2)
-            if self.rect.right > SCREEN_WIDTH:
-                self.rect.right = SCREEN_WIDTH
-                self.direction = random.uniform(math.pi/2, 3*math.pi/2)
-            if self.rect.top < FLY_BOUNDARY_TOP:
-                self.rect.top = FLY_BOUNDARY_TOP
-                self.direction = random.uniform(0, math.pi)  # Force direction downward
-            if self.rect.bottom > FLY_BOUNDARY_BOTTOM:
-                self.rect.bottom = FLY_BOUNDARY_BOTTOM
-                self.direction = random.uniform(math.pi, 2*math.pi)  # Force direction upward
+                # Bounce off edges of screen and boundaries
+                if self.rect.left < 0:
+                    self.rect.left = 0
+                    self.direction = random.uniform(-math.pi/2, math.pi/2)
+                if self.rect.right > SCREEN_WIDTH:
+                    self.rect.right = SCREEN_WIDTH
+                    self.direction = random.uniform(math.pi/2, 3*math.pi/2)
+                if self.rect.top < FLY_BOUNDARY_TOP:
+                    self.rect.top = FLY_BOUNDARY_TOP
+                    self.direction = random.uniform(0, math.pi)  # Force direction downward
+                if self.rect.bottom > FLY_BOUNDARY_BOTTOM:
+                    self.rect.bottom = FLY_BOUNDARY_BOTTOM
+                    self.direction = random.uniform(math.pi, 2*math.pi)  # Force direction upward
 
     def start_drag(self):
         self.being_dragged = True
@@ -476,6 +554,17 @@ class FlySprite(AnimatedSprite):
         
     def update_pet_age(self, pet_age):
         self.pet_age = pet_age
+        
+    def set_game_over_mode(self, enabled, center=None):
+        """Set the fly to game over mode orbiting the tombstone"""
+        self.game_over_mode = enabled
+        if enabled and center:
+            self.orbit_center = center
+            # Assign a random starting position around the orbit
+            self.orbit_angle = random.uniform(0, 2 * math.pi)
+            # Adjust speed and distance for interesting patterns
+            self.orbit_speed = random.uniform(0.01, 0.03)
+            self.orbit_distance = random.uniform(TOMBSTONE_FLY_RADIUS - 10, TOMBSTONE_FLY_RADIUS + 10)
 
 # Explosion animation sprite
 class ExplosionSprite(pygame.sprite.Sprite):
@@ -540,6 +629,21 @@ def create_fly(fly_frames, fly_sprites, pet_age, max_flies):
         return fly
     return None
 
+# Function to create flies for game over state around tombstone
+def create_tombstone_flies(fly_frames, fly_sprites, tombstone_center, count=TOMBSTONE_FLY_COUNT):
+    # Clear existing flies
+    fly_sprites.empty()
+    
+    # Create new flies at positions around the tombstone
+    for i in range(count):
+        angle = (i * 2 * math.pi / count)
+        x = tombstone_center[0] + math.cos(angle) * TOMBSTONE_FLY_RADIUS
+        y = tombstone_center[1] + math.sin(angle) * TOMBSTONE_FLY_RADIUS
+        
+        fly = FlySprite(fly_frames, x, y, 20)  # Use adult speed for game over flies
+        fly.set_game_over_mode(True, tombstone_center)
+        fly_sprites.add(fly)
+
 #----------------------------------------------------------------------
 # UI CLASSES AND FUNCTIONS
 #----------------------------------------------------------------------
@@ -574,8 +678,11 @@ def create_menu_buttons():
 
 # Create and return game over buttons
 def create_game_over_buttons():
-    retry_button = Button(SCREEN_WIDTH//2 - 100, SCREEN_HEIGHT//2 + 100, 200, 50, "Retry", (0, 150, 0), (0, 200, 0))
-    exit_button = Button(SCREEN_WIDTH//2 - 100, SCREEN_HEIGHT//2 + 170, 200, 50, "Exit", (150, 0, 0), (200, 0, 0))
+    # Creating buttons with preset dimensions but their positions will be updated in draw_game_over
+    button_width = 150  # Reduced from 200
+    button_height = 40  # Reduced from 50
+    retry_button = Button(0, 0, button_width, button_height, "Retry", (0, 150, 0), (0, 200, 0))
+    exit_button = Button(0, 0, button_width, button_height, "Exit", (150, 0, 0), (200, 0, 0))
     return retry_button, exit_button
 
 # Draw the menu screen
@@ -619,21 +726,34 @@ def draw_menu(screen, logo_image, play_button, quit_button, background_image=Non
 
 # Draw the game over screen
 def draw_game_over(screen, pet_age, retry_button, exit_button):
-    # Display game over message
+    # Display game over message - moved higher to make room
     large_font = pygame.font.Font(None, 48)
     game_over_text = large_font.render("Game Over", True, (255, 0, 0))
-    game_over_rect = game_over_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 4))
+    game_over_rect = game_over_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 5))
     screen.blit(game_over_text, game_over_rect)
     
-    # Display final stats
+    # Display final stats - centered
     test_font = pygame.font.Font(None, 24)
     final_age_text = test_font.render(f"Your pet lived to {pet_age} years old", True, (255, 255, 255))
-    final_age_rect = final_age_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 3))
+    final_age_rect = final_age_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 5 + 40))
     screen.blit(final_age_text, final_age_rect)
     
-    # Adjust button positions to be lower
-    retry_button.rect.topleft = (SCREEN_WIDTH // 2 - 100, final_age_rect.bottom + 40)
-    exit_button.rect.topleft = (SCREEN_WIDTH // 2 - 100, retry_button.rect.bottom + 20)
+    # Position buttons side by side at the bottom with proper spacing - smaller buttons
+    button_width = 150  # Reduced from 200
+    button_height = 40  # Reduced from 50
+    button_spacing = 40  # Slightly increased spacing between smaller buttons
+    total_width = (button_width * 2) + button_spacing
+    start_x = (SCREEN_WIDTH - total_width) // 2
+    
+    # Move buttons higher to avoid potential overlap with the larger tombstone
+    retry_button.rect = pygame.Rect(start_x, SCREEN_HEIGHT - 120, button_width, button_height)
+    exit_button.rect = pygame.Rect(start_x + button_width + button_spacing, SCREEN_HEIGHT - 120, button_width, button_height)
+    
+    # Add a semi-transparent background behind buttons for better visibility
+    for button in [retry_button, exit_button]:
+        button_bg = pygame.Surface((button.rect.width + 10, button.rect.height + 10), pygame.SRCALPHA)
+        button_bg.fill((0, 0, 0, 128))
+        screen.blit(button_bg, (button.rect.x - 5, button.rect.y - 5))
     
     # Draw buttons
     retry_button.draw(screen)
@@ -673,6 +793,7 @@ class Game:
         self.all_sprites = pygame.sprite.Group()
         self.fly_sprites = pygame.sprite.Group()
         self.explosion_sprites = pygame.sprite.Group()
+        self.tombstone_sprite = None
         
         # Game sprites
         self.egg_sprite = None
@@ -686,12 +807,26 @@ class Game:
         # UI elements
         self.box_rects = generate_box_rects()
         
+        # Game over state
+        self.game_over_time = 0
+        
     def load_assets(self):
         # Load background
         self.background_image = load_image('graphics/background.png', (SCREEN_WIDTH, SCREEN_HEIGHT), False)
         
         # Load and create sprite frames
         self.load_sprite_frames()
+        
+        # Load tombstone image
+        try:
+            self.tombstone_image = load_image('graphics/tombstone.png', TOMBSTONE_SIZE)
+            print("Tombstone image loaded successfully")
+        except Exception as e:
+            print(f"Error loading tombstone image: {e}")
+            # Create a placeholder tombstone
+            self.tombstone_image = pygame.Surface(TOMBSTONE_SIZE, pygame.SRCALPHA)
+            pygame.draw.rect(self.tombstone_image, (100, 100, 100), (0, TOMBSTONE_SIZE[1]//2, TOMBSTONE_SIZE[0], TOMBSTONE_SIZE[1]//2))
+            pygame.draw.rect(self.tombstone_image, (80, 80, 80), (TOMBSTONE_SIZE[0]//4, 0, TOMBSTONE_SIZE[0]//2, TOMBSTONE_SIZE[1]//2), border_radius=15)
         
         # Create sprite instances
         self.create_sprites()
@@ -792,6 +927,28 @@ class Game:
         self.egg_sprite = EggSprite(self.egg_frames, SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 100)
         self.all_sprites.add(self.egg_sprite)
         
+    def create_tombstone(self):
+        """Create a tombstone at the position of the current pet"""
+        # First, clear all lizard sprites to ensure they disappear
+        self.all_sprites.empty()
+        
+        # Create the tombstone - position it lower on the screen
+        tombstone_pos = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 120)
+        self.tombstone_sprite = TombstoneSprite(tombstone_pos[0], tombstone_pos[1])
+        self.all_sprites.add(self.tombstone_sprite)
+        
+        # Create the flies that swarm around the tombstone
+        create_tombstone_flies(self.fly_frames, self.fly_sprites, tombstone_pos)
+        
+        # Set game over time for timing effects
+        self.game_over_time = pygame.time.get_ticks()
+        
+        # Create an explosion effect where the pet died
+        explosion = ExplosionSprite(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 100)
+        self.explosion_sprites.add(explosion)
+        
+        print("Tombstone created - pet has died")
+        
     def reset_game(self):
         self.previous_pet_age = 0
         self.pet_age = 0
@@ -810,6 +967,9 @@ class Game:
         # Clear all sprites and add the new egg sprite
         self.all_sprites.empty()
         self.all_sprites.add(self.egg_sprite)
+        
+        # Clear existing tombstone
+        self.tombstone_sprite = None
         
         # Clear existing flies and create new ones
         self.fly_sprites.empty()
@@ -870,26 +1030,36 @@ class Game:
                     # Check if pet has starved
                     if self.pet_hunger <= 0:
                         self.game_state = GAME_OVER
+                        self.create_tombstone()  # Create tombstone when pet dies
             else:
                 # Ensure hunger stays at 100% while in egg stage
                 self.pet_hunger = 100
                 
             # Update active sprite based on age
-            self.all_sprites.empty()
-            
-            if self.pet_age < 1:
-                # Add egg sprite to be rendered
-                self.all_sprites.add(self.egg_sprite)
-            elif self.pet_age < 10:
-                self.all_sprites.add(self.baby_komodo_sprite)
-            elif self.pet_age < 20:
-                self.all_sprites.add(self.teenage_sprite)
-            else:
-                self.all_sprites.add(self.old_komodo_sprite)
+            # Only update living sprites if still playing and not transitioning to game over
+            if self.game_state == PLAYING and self.pet_hunger > 0:
+                self.all_sprites.empty()
+                
+                if self.pet_age < 1:
+                    # Add egg sprite to be rendered
+                    self.all_sprites.add(self.egg_sprite)
+                elif self.pet_age < 10:
+                    self.all_sprites.add(self.baby_komodo_sprite)
+                elif self.pet_age < 20:
+                    self.all_sprites.add(self.teenage_sprite)
+                else:
+                    self.all_sprites.add(self.old_komodo_sprite)
             
             # Update flies' pet_age to adjust their behavior
             for fly in self.fly_sprites:
                 fly.update_pet_age(self.pet_age)
+        
+        # Special animation for game over state with the tombstone
+        if self.game_state == GAME_OVER and self.tombstone_sprite:
+            # Make sure flies are in game over mode
+            for fly in self.fly_sprites:
+                if not fly.game_over_mode:
+                    fly.set_game_over_mode(True, self.tombstone_sprite.rect.center)
                 
         # Update all sprite groups
         self.all_sprites.update()
@@ -905,6 +1075,10 @@ class Game:
         self.all_sprites.draw(screen)
         self.fly_sprites.draw(screen)
         self.explosion_sprites.draw(screen)
+        
+        # For debugging - visualize the fly boundary around tombstone
+        if self.game_state == GAME_OVER and self.tombstone_sprite and False:  # Set to True to enable debug visualization
+            pygame.draw.circle(screen, (255, 0, 0), self.tombstone_sprite.rect.center, TOMBSTONE_FLY_RADIUS, 1)
         
     def handle_mouse_down(self, mouse_pos):
         if self.game_state == PLAYING:
